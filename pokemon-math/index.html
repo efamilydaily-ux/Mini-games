@@ -1,7 +1,6 @@
 <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
 <script>var vConsole = new window.VConsole();</script>
 
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -17,118 +16,132 @@
 <div class="screen active" id="login-screen">
   <div class="login-logo">
     <div class="login-pokeball-icon">
-      <svg viewBox="0 0 100 100" width="70" height="70">
+      <svg viewBox=\"0 0 100 100\" width=\"70\" height=\"70\">
         <path d="M5,50 A45,45 0 0,1 95,50" fill="#E3350D" stroke="#1a1a2e" stroke-width="4"/>
         <path d="M5,50 A45,45 0 0,0 95,50" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="4"/>
         <rect x="5" y="46" width="90" height="8" fill="#1a1a2e"/>
         <circle cx="50" cy="50" r="14" fill="#1a1a2e"/>
-        <circle cx="50" cy="50" r="9" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="2"/>
-        <circle cx="50" cy="50" r="4" fill="white"/>
+        <circle cx="50" cy="50" r="7" fill="#F0F4FF"/>
       </svg>
     </div>
-    <div class="login-title">寶可夢數感訓練所</div>
-    <div class="login-subtitle">2 位數進退位心算速擊</div>
+    <h1>寶可夢數感訓練所</h1>
+    <p>進位加法 • 退位減法 8秒極速對戰</p>
   </div>
 
-  <div class="login-box">
+  <div class="login-card">
     <div class="input-group">
-      <label for="trainer-name-input">訓練員名字</label>
-      <input type="text" id="trainer-name-input" placeholder="請輸入名字 (例如: Emma)" maxlength="10" autocomplete="off">
+      <label for="trainer-name-input">🎯 訓練員代號</label>
+      <input type="text" id="trainer-name-input" placeholder="請輸入您的名字..." maxlength="12">
     </div>
-
-    <div class="input-group" style="margin-top: 15px;">
-      <label for="trainer-password-input">記憶密碼</label>
-      <input type="password" id="trainer-password-input" placeholder="請輸入密碼 (新玩家自訂即可)" maxlength="20">
+    <div class="input-group">
+      <label for="trainer-password-input">🔑 雲端備份密碼</label>
+      <input type="password" id="trainer-password-input" placeholder="請輸入密碼（新玩家會直接註冊）...">
     </div>
-
-    <button class="btn-login" id="btn-login" style="margin-top: 25px;">⚡ 進入遊戲 ⚡</button>
-    <button class="btn-switch-user" id="btn-switch-user" style="margin-top: 15px;">返回大廳</button>
+    <button class="btn-login" id="btn-login">進入寶可夢世界</button>
   </div>
 </div>
 
 <div class="screen" id="home-screen">
-  <div class="home-header">
-    <div class="trainer-info">
-      <div class="trainer-name" id="trainer-name-display">訓練員：玩家</div>
+  <div id="trainer-info-tag">🎯 訓練員: ---</div>
+  
+  <div class="partner-display-zone">
+    <div id="partner-label-text">🌟 目前出戰伴侶</div>
+    <div class="partner-card-glow">
+      <img id="home-partner-sprite" src="" alt="出戰伴侶">
+      <div id="partner-name">---</div>
+    </div>
+    <p class="hint-text">💡 提示：點擊下方圖鑑中已解鎖的寶可夢，即可更換出戰伴侶！</p>
+  </div>
+
+  <div class="stats-container">
+    <div class="stat-box">
+      <span class="stat-label">解鎖圖鑑</span>
+      <span class="stat-value" id="stat-caught">0 / 151</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">總對戰數</span>
+      <span class="stat-value" id="stat-battles">0</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">平均準確率</span>
+      <span class="stat-value" id="stat-acc">-%</span>
     </div>
   </div>
 
-  <div class="partner-panel">
-    <div class="partner-title">目前出戰伴侶</div>
-    <div class="partner-sprite-wrap">
-      <img class="partner-sprite" id="home-partner-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="伴侶寶可夢">
-    </div>
-    <button class="btn-action" id="btn-change-partner">🔄 隨機更換伴侶</button>
+  <div class="bottom-action-zone">
+    <button class="btn-main-battle" id="btn-start">⚡ 開始心算對戰 (8秒挑戰)</button>
   </div>
 
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">解鎖圖鑑</div>
-      <div class="stat-value" id="val-pokedex">0 / 151</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">總對戰數</div>
-      <div class="stat-value" id="val-battles">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">平均準確率</div>
-      <div class="stat-value" id="val-accuracy">0%</div>
-    </div>
-  </div>
-
-  <div class="home-menu">
-    <button class="btn-menu-primary" id="btn-start">⚡ 開始心算對戰 (5秒擊破)</button>
-    <button class="btn-menu-secondary" id="btn-open-pokedex">📖 查看寶可夢圖鑑</button>
+  <div class="pokedex-section">
+    <h3 class="section-title">📂 寶可夢圖鑑 (點擊已捕捉精靈更換伴侶)</h3>
+    <div class="pokedex-grid" id="pokedex-grid"></div>
   </div>
 </div>
 
 <div class="screen" id="battle-screen">
   <div class="battle-header">
-    <div class="battle-timer">⏱️ <span id="battle-time">5.0</span>s</div>
-    <div class="battle-score-wrap">SCORE: <span id="battle-score">0</span></div>
+    <div class="battle-stage-title">⚔️ 野生寶可夢對戰中</div>
+    <button class="btn-quit" id="btn-quit">逃跑</button>
   </div>
 
-  <div class="timer-bar">
-    <div class="timer-fill" id="timer-fill"></div>
+  <div class="energy-container">
+    <span class="energy-label">精靈球充能:</span>
+    <div class="energy-bar-bg">
+      <div class="energy-fill" id="energy-fill"></div>
+    </div>
+    <span class="energy-pct" id="energy-pct">0%</span>
   </div>
 
   <div class="battle-arena">
-    <div class="enemy-platform">
-      <img class="enemy-sprite" id="enemy-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="野生寶可夢">
+    <div class="poke-fighter">
+      <img id="battle-partner" src="" alt="">
+      <div class="poke-fighter-name" id="battle-partner-name">---</div>
     </div>
-    <div class="question-box">
-      <div class="question-text" id="question-text">45 + 38 = ?</div>
+    <div class="arena-vs">VS</div>
+    <div class="poke-fighter">
+      <img id="battle-wild" src="" alt="">
+      <div class="poke-fighter-name" id="battle-wild-name">---</div>
     </div>
   </div>
 
-  <div class="answers-grid">
-    <button class="btn-ans" data-idx="0">-</button>
-    <button class="btn-ans" data-idx="1">-</button>
-    <button class="btn-ans" data-idx="2">-</button>
-    <button class="btn-ans" data-idx="3">-</button>
+  <div class="score-chips" id="score-chips"></div>
+
+  <div class="question-panel">
+    <div class="q-title">第 <span id="q-num">1</span> 題</div>
+    <div class="question-text" id="question-text">-- + --</div>
+    <div class="question-hint" id="question-hint">💡 題型: 計算中</div>
   </div>
 
-  <div class="battle-footer">
-    <button class="btn-quit" id="btn-quit">🏳️ 逃跑 (結束對戰)</button>
+  <div class="timer-container">
+    <div class="timer-bar-bg">
+      <div class="timer-fill" id="timer-fill"></div>
+    </div>
+    <div class="timer-text-container">
+      <span>倒數計時</span>
+      <span id="timer-sec">8s</span>
+    </div>
   </div>
+
+  <div class="answers-grid" id="answers-grid"></div>
 </div>
 
 <div class="screen" id="result-screen">
-  <div class="result-box">
-    <div class="result-title">對戰結束</div>
-    <div class="result-score-label">獲得總分</div>
-    <div class="result-score" id="res-score">0</div>
-
-    <div class="result-details">
-      <div class="res-detail-item">
-        <span>答對題數</span>
-        <span id="res-details-count">0 / 0</span>
-      </div>
-      <div class="res-detail-item">
-        <span>本次準確率</span>
-        <span id="res-details-acc">0%</span>
-      </div>
+  <div class="result-card">
+    <div class="result-title" id="result-title">🎉 挑戰成功！</div>
+    
+    <div class="result-pokemon-display">
+      <img id="result-sprite" src="" alt="">
+      <div class="result-pokemon-name" id="result-pokemon-name">---</div>
     </div>
+
+    <div class="result-score-box">
+      獲得充能分數：<span id="result-score-num">0</span> 分
+    </div>
+
+    <div class="result-chips-title">答題詳情</div>
+    <div class="result-chips" id="result-chips"></div>
+
+    <div class="result-catch-msg" id="result-catch-msg">---</div>
 
     <div class="result-menu">
       <button class="btn-menu-primary" id="btn-retry">🔄 再戰一場</button>
@@ -137,38 +150,27 @@
   </div>
 </div>
 
-<div class="dex-modal" id="dex-modal">
-  <div class="dex-modal-overlay" id="dex-modal-overlay"></div>
-  <div class="dex-modal-content">
-    <div class="dex-modal-header">
-      <div class="dex-modal-title">寶可夢關都圖鑑</div>
-      <button class="btn-close-dex" id="btn-close-dex">✕</button>
-    </div>
-    <div class="pokedex-grid" id="pokedex-grid">
-      </div>
-  </div>
-</div>
-
 <div class="capture-overlay" id="capture-overlay">
+  <div class="capture-flash" id="capture-flash"></div>
   <div class="capture-text" id="capture-text">精靈球捕捉充能完畢！</div>
+  <div class="capture-text2" id="capture-text2">✨ 獲得新夥伴！✨</div>
   <img class="capture-pokemon-sprite" id="capture-sprite" src="" alt="">
   <div class="pokeball-container">
     <div class="pokeball" id="pokeball">
-      <svg viewBox="0 0 100 100">
+      <svg viewBox="0 0 100 100" width="100%" height="100%">
         <path d="M5,50 A45,45 0 0,1 95,50" fill="#E3350D" stroke="#1a1a2e" stroke-width="4"/>
         <path d="M5,50 A45,45 0 0,0 95,50" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="4"/>
         <rect x="5" y="46" width="90" height="8" fill="#1a1a2e"/>
         <circle cx="50" cy="50" r="14" fill="#1a1a2e"/>
-        <circle cx="50" cy="50" r="9" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="2"/>
-        <circle cx="50" cy="50" r="4" fill="white"/>
+        <circle cx="50" cy="50" r="7" fill="#F0F4FF"/>
       </svg>
     </div>
   </div>
 </div>
 
-<div id="loading-overlay" class="loading-overlay">
+<div class="loading-overlay" id="loading-overlay">
   <div class="spinner"></div>
-  <p>E家雲端連線中...</p>
+  <p style="font-weight: bold; font-size: 14px; color: var(--text-dim);">網頁載入中...</p>
 </div>
 
 <script src="app.js"></script>
