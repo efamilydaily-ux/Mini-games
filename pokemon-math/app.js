@@ -58,7 +58,7 @@ class GameDataManager {
   // 玩家輸入完資料，按下按鈕時，才真正發送 Fetch 連線雲端
   static async loginOrRegisterRemote(trainerName, password) {
     try {
-      const res = await fetch('/pokemon-math/api/auth-login', {
+      const res = await fetch('/api/auth-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,7 +86,7 @@ class GameDataManager {
   // 儲存進度
   static async savePlayerStateRemote(trainerName, token, gameData) {
     try {
-      const res = await fetch('/pokemon-math/api/save-score', {
+      const res = await fetch('/api/save-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
