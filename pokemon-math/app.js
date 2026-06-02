@@ -21,7 +21,7 @@ const POKE_NAMES_MAP = {
   85:'嘟嘟利', 86:'小海獅', 87:'白海獅', 88:'臭泥', 89:'臭臭泥', 90:'大舌貝',
   91:'刺甲貝', 92:'鬼斯', 93:'鬼斯通', 94:'耿鬼', 95:'大岩蛇', 96:'催眠貘',
   97:'引夢貘人', 98:'大鉗蟹', 99:'巨鉗蟹', 100:'霹靂電球', 101:'頑皮雷彈',
-  102:'蛋蛋', 103:'椰蛋樹', 104:'卡拉卡拉', 105:'嘎啦嘎啦', 106:'飛腿郎',
+  102:'蛋蛋', 103:'椰蛋樹', 104:'卡拉卡拉', 105:'嘎拉嘎啦', 106:'飛腿郎',
   107:'快拳郎', 108:'大舌頭', 109:'瓦斯彈', 110:'雙彈瓦斯', 111:'獨角犀牛',
   112:'鑽角犀獸', 113:'吉利蛋', 114:'蔓藤怪', 115:'袋獸', 116:'墨海馬',
   117:'海刺龍', 118:'角金魚', 119:'金魚王', 120:'海星星', 121:'寶石海星',
@@ -39,8 +39,12 @@ const ALL_POKEMONS = Object.keys(POKE_NAMES_MAP).map(idStr => {
   return { id, name: POKE_NAMES_MAP[id] };
 });
 
+function getSprite(id) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+}
+
 // ============================================================
-// CLASS: GameDataManager
+// CLASS: GameDataManager (雲端備份控制)
 // ============================================================
 class GameDataManager {
   static get GAME_ID() { return 'pokemon-math'; }
@@ -143,245 +147,588 @@ class PlayerSessionManager {
 }
 
 // ============================================================
-// CLASS: BattleEngine (5秒挑戰)
+// CLASS: BattleEngine — 題目生成、計時、勝負判定
 // ============================================================
 class BattleEngine {
   constructor() {
-    this.duration = 5000; 
-    this.timer = null;
-    this.startTime = 0;
+    this.questions = [];
+    this.current = 0;
+    this.correct = 0;
+    this.results = [];
+    this.wildPokemon = null;
+    this.timerInterval = null;
+    this.timerStart = null;
+    this.answered = false;
+  }
+
+  reset(uncaughtPokemons) {
+    const pool = uncaughtPokemons.length > 0 ? uncaughtPokemons : ALL_POKEMONS;
+    this.wildPokemon = pool[Math.floor(Math.random() * pool.length)];
+
+    this.questions = Array.from({ length: 10 }, () => this.generateQuestion());
+    this.current = 0;
+    this.correct = 0;
+    this.results = [];
+    this.answered = false;
   }
 
   generateQuestion() {
-    const isSub = Math.random() < 0.5;
-    let a, b, answer, text;
-    if (!isSub) {
-      const unitA = Math.floor(Math.random() * 9) + 1; 
-      const unitB = Math.floor(Math.random() * (10 - unitA)) + (10 - unitA); 
-      const tensA = Math.floor(Math.random() * 8) + 1; 
-      const tensB = Math.floor(Math.random() * (9 - tensA)) + 1; 
-      a = tensA * 10 + unitA; b = tensB * 10 + unitB; answer = a + b;
-      text = `${a} + ${b} = ?`;
+    const isAdd = Math.random() < 0.5;
+    let a, b, answer, type;
+
+    if (isAdd) {
+      const units = Math.floor(Math.random() * 8) + 2;
+      b = Math.floor(Math.random() * (9 - (10 - units) + 1)) + (10 - units);
+      if (b > 9) b = 9;
+      const tens = Math.floor(Math.random() * 8) + 1;
+      a = tens * 10 + units;
+      if (a + b > 99) a -= 10;
+      answer = a + b;
+      type = '進位加法';
     } else {
-      const unitA = Math.floor(Math.random() * 9); 
-      let unitB = Math.floor(Math.random() * 9) + 1; 
-      if (unitA >= unitB) { unitB = unitA + 1 + Math.floor(Math.random() * (9 - unitA)); }
-      const tensA = Math.floor(Math.random() * 7) + 3; 
-      const tensB = Math.floor(Math.random() * (tensA - 1)) + 1; 
-      a = tensA * 10 + unitA; b = tensB * 10 + unitB; answer = a - b;
-      text = `${a} - ${b} = ?`;
+      const aUnits = Math.floor(Math.random() * 8);
+      b = aUnits + Math.floor(Math.random() * (8 - aUnits)) + 2;
+      if (b > 9) b = 9;
+      const aTens = Math.floor(Math.random() * 8) + 2;
+      a = aTens * 10 + aUnits;
+      answer = a - b;
+      if (answer < 10) { a += 10; answer = a - b; }
+      type = '退位減法';
     }
-    const options = new Set([answer]);
-    while (options.size < 4) {
-      const offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
-      const fake = answer + offset;
-      if (fake > 0 && fake < 200) options.add(fake);
+
+    const distractors = new Set([answer]);
+    const candidates = [];
+    for (let d = -5; d <= 5; d++) { if (d !== 0) candidates.push(answer + d); }
+    candidates.sort(() => Math.random() - 0.5);
+    for (const c of candidates) {
+      if (distractors.size >= 4) break;
+      if (c > 0 && c < 100) distractors.add(c);
     }
-    return { text, answer, options: Array.from(options).sort((x, y) => x - y) };
+    while (distractors.size < 4) {
+      const rand = answer + Math.floor(Math.random() * 15) - 7;
+      if (rand > 0 && rand !== answer) distractors.add(rand);
+    }
+    const options = Array.from(distractors).sort((x, y) => x - y); // 升序排列讓排版更精美齊整
+    return { a, b, answer, text: isAdd ? `${a} + ${b}` : `${a} - ${b}`, hint: type, options };
   }
 
-  startTimer(onTick, onTimeout) {
-    this.stopTimer(); this.startTime = Date.now();
-    const loop = () => {
-      const elapsed = Date.now() - this.startTime;
-      const remain = Math.max(0, this.duration - elapsed);
-      if (onTick) onTick(remain / 1000);
-      if (remain <= 0) { if (onTimeout) onTimeout(); }
-      else { this.timer = requestAnimationFrame(loop); }
-    };
-    this.timer = requestAnimationFrame(loop);
+  currentQuestion() {
+    return this.questions[this.current];
   }
 
-  stopTimer() { if (this.timer) { cancelAnimationFrame(this.timer); this.timer = null; } }
+  isFinished() {
+    return this.current >= 10;
+  }
+
+  isWin() {
+    return this.correct >= 8;
+  }
+
+  startTimer(secs, onTick, onTimeout) {
+    clearInterval(this.timerInterval);
+    this.timerStart = Date.now();
+    const total = secs * 1000;
+
+    this.timerInterval = setInterval(() => {
+      const elapsed = Date.now() - this.timerStart;
+      const remaining = Math.max(0, total - elapsed);
+      const pct = (remaining / total) * 100;
+      onTick(pct, Math.ceil(remaining / 1000));
+      if (remaining <= 0) {
+        clearInterval(this.timerInterval);
+        if (!this.answered) onTimeout();
+      }
+    }, 50);
+  }
+
+  stopTimer() {
+    clearInterval(this.timerInterval);
+  }
+
+  submitAnswer(chosen) {
+    if (this.answered) return false;
+    this.answered = true;
+    this.stopTimer();
+    const isCorrect = chosen === this.currentQuestion().answer;
+    if (isCorrect) this.correct++;
+    this.results.push(isCorrect);
+    this.current++;
+    return isCorrect;
+  }
+
+  timeout() {
+    if (this.answered) return;
+    this.answered = true;
+    this.results.push(false);
+    this.current++;
+  }
 }
 
 // ============================================================
-// CLASS: AudioEngine
+// CLASS: AudioEngine — 音效
 // ============================================================
 class AudioEngine {
-  constructor() { this.ctx = null; }
-  unlock() {
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  constructor() {
+    this._ctx = null;
   }
-  play(type) {
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
-    osc.connect(gain); gain.connect(this.ctx.destination); const now = this.ctx.currentTime;
-    if (type === 'correct') {
-      osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now + 0.08);
-      gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.25);
-    } else if (type === 'wrong') {
-      osc.frequency.setValueAtTime(180, now); osc.frequency.linearRampToValueAtTime(100, now + 0.2);
-      gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.25);
-    } else if (type === 'capture') {
-      osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(880, now + 0.18);
-      gain.gain.setValueAtTime(0.12, now); osc.start(now); osc.stop(now + 0.4);
+
+  _getCtx() {
+    if (!this._ctx) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      this._ctx = new C();
     }
+    return this._ctx;
+  }
+
+  unlock() { this._getCtx(); }
+
+  play(type) {
+    try {
+      const ctx = this._getCtx();
+      if (type === 'right') {
+        [523, 659, 784, 1047].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination); o.frequency.value = freq;
+          const t = ctx.currentTime + i * 0.07;
+          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.15, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+          o.start(t); o.stop(t + 0.18);
+        });
+      } else if (type === 'wrong') {
+        [220, 180].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination); o.frequency.value = freq; o.type = 'sawtooth';
+          const t = ctx.currentTime + i * 0.1;
+          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.15, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+          o.start(t); o.stop(t + 0.25);
+        });
+      } else if (type === 'catch') {
+        [600, 800, 1000, 1200, 1500].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination); o.frequency.value = freq;
+          const t = ctx.currentTime + i * 0.08;
+          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.2, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          o.start(t); o.stop(t + 0.35);
+        });
+      }
+    } catch {}
   }
 }
 
 // ============================================================
-// CLASS: UIManager (美化排版、注入 10 題對 8 題邏輯)
+// CLASS: UIManager — 頁面切換、渲染、按鈕美化與動畫控制
 // ============================================================
 class UIManager {
   constructor(session, battle, audio) {
-    this.session = session; this.battle = battle; this.audio = audio;
-    this.currentQuestion = null; this.score = 0; this.qCount = 0; this.cCount = 0;
-    this.spriteBase = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+    this.session = session;
+    this.battle = battle;
+    this.audio = audio;
     this._bindAll();
-  }
-
-  createStars() {
-    const box = document.getElementById('stars'); if (!box) return; box.innerHTML = '';
-    for (let i = 0; i < 40; i++) {
-      const s = document.createElement('div'); s.className = 'star';
-      s.style.left = Math.random() * 100 + '%'; s.style.top = Math.random() * 100 + '%';
-      box.appendChild(s);
-    }
   }
 
   showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const target = document.getElementById(id); if (target) target.classList.add('active');
+    const target = document.getElementById(id);
+    if (target) target.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  createStars() {
+    const container = document.getElementById('stars');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < 40; i++) {
+      const s = document.createElement('div'); s.className = 'star';
+      const size = Math.random() * 2 + 1;
+      s.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s;`;
+      container.appendChild(s);
+    }
+  }
+
+  animateSprite(id, anim) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('bounce', 'shake');
+    void el.offsetWidth;
+    el.classList.add(anim);
+    el.addEventListener('animationend', () => el.classList.remove(anim), { once: true });
   }
 
   refreshHome() {
-    document.getElementById('val-pokedex').textContent = `${this.session.getCaughtCount()} / ${TOTAL}`;
-    document.getElementById('val-battles').textContent = this.session.state.totalBattles;
-    const acc = this.session.getAccuracy();
-    document.getElementById('val-accuracy').textContent = acc !== null ? acc + '%' : '-%';
-    document.getElementById('home-partner-sprite').src = `${this.spriteBase}${this.session.state.partnerId}.png`;
-    const nameEl = document.getElementById('trainer-name-display');
-    if (nameEl) nameEl.textContent = `訓練員：${this.session.currentName}`;
+    const s = this.session;
+    const nameDisplay = document.getElementById('trainer-name-display') || document.getElementById('trainer-info-tag');
+    if (nameDisplay) nameDisplay.textContent = `🎯 訓練員: ${s.currentName}`;
+
+    const partnerLabel = document.getElementById('partner-label-text');
+    if (partnerLabel) partnerLabel.textContent = `🌟 ${s.currentName} 的伴侶`;
+
+    const partnerData = ALL_POKEMONS.find(p => p.id === s.state.partnerId);
+    const partnerName = partnerData?.name || '皮卡丘';
+    
+    const pSprite = document.getElementById('partner-sprite') || document.getElementById('home-partner-sprite');
+    if (pSprite) pSprite.src = getSprite(s.state.partnerId);
+
+    const pNameEl = document.getElementById('partner-name');
+    if (pNameEl) pNameEl.textContent = partnerName;
+
+    const valPokedex = document.getElementById('val-pokedex') || document.getElementById('stat-caught');
+    if (valPokedex) valPokedex.textContent = `${s.getCaughtCount()} / ${TOTAL}`;
+
+    const valBattles = document.getElementById('val-battles') || document.getElementById('stat-battles');
+    if (valBattles) valBattles.textContent = s.state.totalBattles;
+
+    const valAcc = document.getElementById('val-accuracy') || document.getElementById('stat-acc');
+    const acc = s.getAccuracy();
+    if (valAcc) valAcc.textContent = acc !== null ? acc + '%' : '-%';
+
+    this._renderPokedex();
+  }
+
+  _renderPokedex() {
+    const grid = document.getElementById('pokedex-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    ALL_POKEMONS.forEach(p => {
+      const count = this.session.state.caughtMap[p.id] || 0;
+      const isCaught = count > 0;
+      const isPartner = this.session.state.partnerId === p.id;
+
+      const card = document.createElement('div');
+      let cls = 'dex-card';
+      if (isCaught) cls += ' caught';
+      if (isPartner) cls += ' active-partner';
+      card.className = cls;
+
+      let inner = `<div class="dex-num">#${String(p.id).padStart(3, '0')}</div>`;
+      inner += `<img class="dex-img ${isCaught ? '' : 'silhouette'}" src="${getSprite(p.id)}" style="${isCaught ? '' : 'filter:brightness(0);'}" alt="">`;
+      inner += `<div class="dex-name">${isCaught ? p.name : '???'}</div>`;
+      if (count > 1) inner += `<div class="dex-count">x${count}</div>`;
+      card.innerHTML = inner;
+
+      if (isCaught) {
+        card.addEventListener('click', () => this._selectPartner(p.id));
+      }
+
+      grid.appendChild(card);
+    });
+  }
+
+  _selectPartner(id) {
+    this.session.state.partnerId = id;
+    this.session.save();
+    this.refreshHome();
+    this.animateSprite('home-partner-sprite', 'bounce');
+    this.animateSprite('partner-sprite', 'bounce');
   }
 
   changePartnerRandom() {
-    const list = this.session.getCaughtIds(); if (list.length === 0) return;
-    this.session.state.partnerId = list[Math.floor(Math.random() * list.length)];
-    this.session.save(); this.refreshHome();
+    const caughtIds = this.session.getCaughtIds();
+    if (caughtIds.length <= 1) { alert('你目前只有一隻寶可夢，快挑戰對戰來捕獲更多吧！'); return; }
+    let current = this.session.state.partnerId;
+    let next = current;
+    while (next === current) {
+      next = caughtIds[Math.floor(Math.random() * caughtIds.length)];
+    }
+    this.session.state.partnerId = next;
+    this.session.save();
+    this.refreshHome();
+    this.animateSprite('home-partner-sprite', 'bounce');
+    this.animateSprite('partner-sprite', 'bounce');
   }
 
+  // -------- 對戰開始 --------
   startBattle() {
-    this.score = 0; this.qCount = 0; this.cCount = 0;
-    document.getElementById('battle-score').textContent = '得分: 0';
-    this.nextQuestion(); this.showScreen('battle-screen');
+    const uncaught = this.session.getUncaughtPokemons();
+    this.battle.reset(uncaught);
+
+    const partnerData = ALL_POKEMONS.find(p => p.id === this.session.state.partnerId);
+    
+    const bPartner = document.getElementById('battle-partner') || document.getElementById('home-partner-sprite');
+    if (bPartner) bPartner.src = getSprite(this.session.state.partnerId);
+    
+    const bPartnerName = document.getElementById('battle-partner-name');
+    if (bPartnerName) bPartnerName.textContent = partnerData?.name || '皮卡丘';
+    
+    const bWild = document.getElementById('battle-wild') || document.getElementById('enemy-sprite');
+    if (bWild) bWild.src = getSprite(this.battle.wildPokemon.id);
+    
+    const bWildName = document.getElementById('battle-wild-name');
+    if (bWildName) bWildName.textContent = `野生 ${this.battle.wildPokemon.name}`;
+
+    this._setEnergy(0);
+    this._renderChips([]);
+    this.showScreen('battle-screen');
+    this._showQuestion();
   }
 
-  nextQuestion() {
-    if (this.qCount >= 10) {
-      this.endBattle();
+  _setEnergy(pct) {
+    const fill = document.getElementById('energy-fill') || document.getElementById('timer-fill');
+    const txt = document.getElementById('energy-pct') || document.getElementById('battle-time');
+    if (fill) fill.style.width = pct + '%';
+    if (txt) txt.textContent = pct + '%';
+  }
+
+  _renderChips(results) {
+    const container = document.getElementById('score-chips') || document.getElementById('battle-score');
+    if (!container) return;
+
+    // 如果頁面用的是舊的文字純容器，動態轉化為靚靚的進度條樣式
+    if (container.tagName !== 'DIV' || container.id === 'battle-score') {
+      const qNum = this.battle.current + (this.battle.answered ? 0 : 1);
+      container.textContent = `題目：${Math.min(10, qNum)} / 10 | 正確：${this.battle.correct}`;
       return;
     }
-
-    this.qCount++;
-    const scoreEl = document.getElementById('battle-score');
-    if (scoreEl) scoreEl.textContent = `題目：${this.qCount} / 10 | 正確：${this.cCount}`;
-
-    this.currentQuestion = this.battle.generateQuestion();
-    const pool = this.session.getUncaughtPokemons();
-    const wild = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : ALL_POKEMONS[Math.floor(Math.random() * TOTAL)];
     
-    document.getElementById('enemy-sprite').src = `${this.spriteBase}${wild.id}.png`;
-    document.getElementById('question-text').textContent = this.currentQuestion.text;
+    container.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (results[i] === true ? ' correct' : results[i] === false ? ' wrong' : '');
+      chip.textContent = results[i] === true ? '✓' : results[i] === false ? '✗' : '';
+      container.appendChild(chip);
+    }
+  }
 
-    // 💡 關鍵修正：將 'btn-ans' 改回你 HTML 本來的精美 Class 'btn-answer'！
-    const btns = document.querySelectorAll('.btn-answer');
-    this.currentQuestion.options.forEach((val, i) => {
-      if (btns[i]) { 
-        btns[i].textContent = val; 
-        btns[i].className = 'btn-answer'; 
-        btns[i].style.transform = 'none'; 
-      }
-    });
+  // 💡 關鍵核心更新：動態精美渲染答題按鈕，絕不擠壓
+  _showQuestion() {
+    if (this.battle.isFinished()) { this._endBattle(); return; }
+    this.battle.answered = false;
+    const q = this.battle.currentQuestion();
+    
+    const qNumEl = document.getElementById('q-num');
+    if (qNumEl) qNumEl.textContent = this.battle.current + 1;
+    
+    document.getElementById('question-text').textContent = q.text;
+    
+    const qHint = document.getElementById('question-hint');
+    if (qHint) qHint.textContent = `💡 題型: ${q.hint}`;
 
-    this.battle.startTimer(
-      (sec) => {
-        document.getElementById('battle-time').textContent = sec.toFixed(1) + 's';
-        document.getElementById('timer-fill').style.width = (sec / 5.0 * 100) + '%';
+    // 大粒漂亮按鈕動態注入、完美清除舊狀態
+    const grid = document.getElementById('answers-grid') || document.querySelector('.answers-grid');
+    if (grid) {
+      grid.innerHTML = '';
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-answer';
+        btn.style.width = '100%';
+        btn.style.display = 'block';
+        btn.textContent = opt;
+        btn.setAttribute('data-idx', idx);
+        btn.addEventListener('click', () => this._handleAnswer(opt, q, btn));
+        grid.appendChild(btn);
+      });
+    } else {
+      // 兼容傳統舊 HTML 結構四按鈕
+      const btns = document.querySelectorAll('.btn-answer') || document.querySelectorAll('.btn-ans');
+      btns.forEach((btn, i) => {
+        if (btn && q.options[i] !== undefined) {
+          btn.textContent = q.options[i];
+          btn.className = 'btn-answer';
+          btn.disabled = false;
+          btn.style.display = 'block';
+          btn.setAttribute('data-idx', i);
+          // 移除舊的監聽，重新綁定新核心數據
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          newBtn.addEventListener('click', () => this._handleAnswer(q.options[i], q, newBtn));
+        }
+      });
+    }
+
+    // 8秒挑戰計時器驅動
+    this.battle.startTimer(8,
+      (pct, sec) => {
+        const fill = document.getElementById('timer-fill');
+        const timeTxt = document.getElementById('timer-sec') || document.getElementById('battle-time');
+        if (fill) fill.style.width = pct + '%';
+        if (timeTxt) timeTxt.textContent = sec + 's';
+        if (fill) {
+          if (pct < 33) fill.className = 'timer-fill danger';
+          else if (pct < 66) fill.className = 'timer-fill warning';
+          else fill.className = 'timer-fill';
+        }
       },
-      () => { 
-        this.audio.play('wrong'); 
-        this.nextQuestion(); 
-      }
+      () => this._handleTimeout()
     );
   }
 
-  handleAnswer(idx) {
-    this.battle.stopTimer();
-    const btns = document.querySelectorAll('.btn-answer');
-    const selected = this.currentQuestion.options[idx];
-    const isCorrect = (selected === this.currentQuestion.answer);
+  _handleAnswer(chosen, q, btn) {
+    if (this.battle.answered) return;
+    const isCorrect = this.battle.submitAnswer(chosen);
+    this._processResult(isCorrect, q, btn);
+  }
 
-    btns.forEach((b, i) => {
-      if (this.currentQuestion.options[i] === this.currentQuestion.answer) b.classList.add('correct');
-      else if (i === idx && !isCorrect) b.classList.add('wrong');
+  _handleTimeout() {
+    this.battle.timeout();
+    const grid = document.getElementById('answers-grid') || document.querySelector('.answers-grid') || document.body;
+    const btns = grid.querySelectorAll('.btn-answer');
+    const q = this.battle.questions[this.battle.current - 1];
+    
+    btns.forEach(b => {
+      b.disabled = true;
+      if (parseInt(b.textContent) === q.answer) b.classList.add('correct');
     });
+    
+    this.audio.play('wrong');
+    this.animateSprite('battle-partner', 'shake');
+    this.animateSprite('home-partner-sprite', 'shake');
+    this.animateSprite('battle-wild', 'bounce');
+    this.animateSprite('enemy-sprite', 'bounce');
+    
+    this._renderChips(this.battle.results);
+    setTimeout(() => this._showQuestion(), 900);
+  }
+
+  _processResult(isCorrect, q, clickedBtn) {
+    const grid = document.getElementById('answers-grid') || document.querySelector('.answers-grid') || document.body;
+    const btns = grid.querySelectorAll('.btn-answer');
+    btns.forEach(b => b.disabled = true);
+
+    if (clickedBtn) {
+      clickedBtn.classList.add(isCorrect ? 'correct' : 'wrong');
+      if (!isCorrect) {
+        btns.forEach(b => { if (parseInt(b.textContent) === q.answer) b.classList.add('correct'); });
+      }
+    }
 
     if (isCorrect) {
-      this.audio.play('correct'); this.score += 10; this.cCount++;
-    } else { 
-      this.audio.play('wrong'); 
-    }
-    
-    setTimeout(() => this.nextQuestion(), 600);
-  }
-
-  async endBattle() {
-    this.battle.stopTimer(); 
-    this.session.recordBattle(this.cCount, this.qCount);
-    
-    document.getElementById('res-score').textContent = this.score;
-    document.getElementById('res-details-count').textContent = `${this.cCount} / ${this.qCount}`;
-    document.getElementById('res-details-acc').textContent = (this.qCount > 0 ? Math.round(this.cCount / this.qCount * 100) : 0) + '%';
-
-    if (this.cCount >= 8) {
-      const uncaught = this.session.getUncaughtPokemons();
-      if (uncaught.length > 0) {
-        const target = uncaught[Math.floor(Math.random() * uncaught.length)];
-        this.session.addCaught(target.id);
-        
-        document.getElementById('capture-text').innerHTML = `太厲害了！答對 ${this.cCount} 題符合資格！<br><span style="color:#ffcb05; font-size:24px; font-weight:bold; text-shadow:2px 2px #3b4cca;">成功捕捉 ${target.name}！</span>`;
-        document.getElementById('capture-sprite').src = `${this.spriteBase}${target.id}.png`;
-        
-        const overlay = document.getElementById('capture-overlay');
-        if (overlay) {
-          overlay.classList.add('active'); 
-          this.audio.play('capture');
-          setTimeout(() => { 
-            overlay.classList.remove('active'); 
-            this.showScreen('result-screen'); 
-          }, 3200);
-        }
-        await this.session.save(); 
-        return;
-      }
+      this.audio.play('right');
+      this.animateSprite('battle-partner', 'bounce');
+      this.animateSprite('home-partner-sprite', 'bounce');
+      this.animateSprite('battle-wild', 'shake');
+      this.animateSprite('enemy-sprite', 'shake');
+      this._setEnergy(this.battle.correct * 10);
     } else {
-      const capText = document.getElementById('capture-text');
-      if (capText) capText.innerHTML = `可惜！只答對了 ${this.cCount} 題。<br>需要答對 8 題以上才能捕捉喔！繼續加油！`;
+      this.audio.play('wrong');
+      this.animateSprite('battle-partner', 'shake');
+      this.animateSprite('home-partner-sprite', 'shake');
+      this.animateSprite('battle-wild', 'bounce');
+      this.animateSprite('enemy-sprite', 'bounce');
     }
-    
-    await this.session.save(); 
-    this.showScreen('result-screen');
+
+    this._renderChips(this.battle.results);
+    setTimeout(() => this._showQuestion(), 900);
   }
 
-  showPokedex() {
-    const grid = document.getElementById('pokedex-grid'); grid.innerHTML = '';
-    ALL_POKEMONS.forEach(p => {
-      const card = document.createElement('div'); const isC = this.session.isCaught(p.id);
-      card.className = `dex-card ${isC ? 'caught' : 'missing'}`;
-      card.innerHTML = `
-        <div class="dex-num">#${String(p.id).padStart(3, '0')}</div>
-        <img class="dex-img" src="${this.spriteBase}${p.id}.png" style="${isC ? '' : 'filter:brightness(0);'}">
-        <div class="dex-name">${isC ? p.name : '???'}</div>
-      `;
-      grid.appendChild(card);
-    });
-    document.getElementById('dex-modal').classList.add('active');
+  async _endBattle() {
+    this.battle.stopTimer();
+    const isWin = this.battle.isWin();
+    this.session.recordBattle(this.battle.correct, 10);
+
+    const rTitle = document.getElementById('result-title');
+    if (rTitle) {
+      rTitle.textContent = isWin ? '🎉 挑戰成功！' : '😿 挑戰失敗';
+      rTitle.className = 'result-title ' + (isWin ? 'win' : 'lose');
+    }
+
+    const rScoreNum = document.getElementById('result-score-num') || document.getElementById('res-score');
+    if (rScoreNum) rScoreNum.textContent = this.battle.correct * 10;
+
+    const rDetailsCount = document.getElementById('res-details-count');
+    if (rDetailsCount) rDetailsCount.textContent = `${this.battle.correct} / 10`;
+
+    const rDetailsAcc = document.getElementById('res-details-acc');
+    if (rDetailsAcc) rDetailsAcc.textContent = (this.battle.correct * 10) + '%';
+
+    const resultChips = document.getElementById('result-chips');
+    if (resultChips) {
+      resultChips.innerHTML = '';
+      this.battle.results.forEach(r => {
+        const chip = document.createElement('div');
+        chip.className = 'chip ' + (r ? 'correct' : 'wrong');
+        chip.textContent = r ? '✓' : '✗';
+        resultChips.appendChild(chip);
+      });
+    }
+
+    if (isWin) {
+      const wild = this.battle.wildPokemon;
+      const wasNew = !this.session.isCaught(wild.id);
+      this.session.addCaught(wild.id);
+      
+      const rSprite = document.getElementById('result-sprite');
+      if (rSprite) rSprite.src = getSprite(wild.id);
+      
+      const rPName = document.getElementById('result-pokemon-name');
+      if (rPName) rPName.textContent = wild.name;
+      
+      const rCatchMsg = document.getElementById('result-catch-msg') || document.getElementById('capture-text');
+      if (rCatchMsg) {
+        rCatchMsg.textContent = wasNew
+          ? `🌟 全新解鎖！${wild.name} 已成功收錄至圖鑑！`
+          : `捕捉到重複的 ${wild.name}！精靈球圖鑑數量增加！`;
+      }
+      
+      await this.session.save();
+      this._showCaptureAnimation(wild, !wasNew);
+    } else {
+      const partnerId = this.session.state.partnerId;
+      const rSprite = document.getElementById('result-sprite');
+      if (rSprite) rSprite.src = getSprite(partnerId);
+      
+      const pName = ALL_POKEMONS.find(p => p.id === partnerId)?.name || '皮卡丘';
+      const rPName = document.getElementById('result-pokemon-name');
+      if (rPName) rPName.textContent = pName;
+      
+      const rCatchMsg = document.getElementById('result-catch-msg') || document.getElementById('capture-text');
+      if (rCatchMsg) {
+        rCatchMsg.textContent = `本輪正確率未達 80%（需答對8題），精靈球充能不足，${this.battle.wildPokemon.name} 逃跑了！`;
+      }
+      
+      await this.session.save();
+      this.showScreen('result-screen');
+    }
+  }
+
+  _showCaptureAnimation(pokemon, isDuplicate) {
+    const overlay = document.getElementById('capture-overlay');
+    if (!overlay) {
+      this.showScreen('result-screen');
+      return;
+    }
+
+    const capSprite = document.getElementById('capture-sprite');
+    const capText = document.getElementById('capture-text');
+    const capText2 = document.getElementById('capture-text2');
+    const pokeball = document.getElementById('pokeball');
+    const flash = document.getElementById('capture-flash');
+
+    if (capSprite) {
+      capSprite.src = getSprite(pokemon.id);
+      capSprite.classList.remove('sucked');
+    }
+    if (capText) capText.textContent = '精靈球捕捉充能完畢！';
+    if (capText2) capText2.textContent = '';
+    if (pokeball) pokeball.className = 'pokeball';
+    
+    overlay.classList.add('active');
+
+    setTimeout(() => {
+      if (capSprite) capSprite.classList.add('sucked');
+      setTimeout(() => {
+        if (pokeball) pokeball.classList.add('shake');
+        this.audio.play('catch');
+        setTimeout(() => {
+          if (flash) {
+            flash.classList.add('flash');
+            setTimeout(() => flash.classList.remove('flash'), 600);
+          }
+          if (capText) capText.innerHTML = `成功收服 ${pokemon.name}！`;
+          if (capText2) capText2.textContent = isDuplicate ? '（圖鑑數量增加！）' : '✨ 獲得新夥伴！✨';
+          setTimeout(() => {
+            overlay.classList.remove('active');
+            this.showScreen('result-screen');
+          }, 1500);
+        }, 1200);
+      }, 400);
+    }, 1000);
   }
 
   _bindAll() {
-    const loginBtn = document.getElementById('btn-login') || document.querySelector('.btn-login');
+    // 登入按鈕事件綁定
+    const loginBtn = document.getElementById('btn-login') || document.getElementById('btn-login-submit') || document.querySelector('.btn-login');
     if (loginBtn) {
       loginBtn.addEventListener('click', async () => {
         const name = document.getElementById('trainer-name-input').value.trim();
@@ -389,7 +736,7 @@ class UIManager {
         if (!name) { alert('請輸入訓練員名字！'); return; }
         if (!password) { alert('請輸入密碼！'); return; }
 
-        const overlay = document.getElementById('loading-overlay') || document.querySelector('.loading-overlay');
+        const overlay = document.getElementById('loading-overlay');
         if (overlay) {
           overlay.style.display = 'flex';
           const pTag = overlay.querySelector('p');
@@ -403,7 +750,9 @@ class UIManager {
         if (!success && overlay) overlay.style.display = 'none';
         if (success) { 
           if (overlay) overlay.style.display = 'none';
-          this.audio.unlock(); this.refreshHome(); this.showScreen('home-screen'); 
+          this.audio.unlock(); 
+          this.refreshHome(); 
+          this.showScreen('home-screen'); 
         }
       });
     }
@@ -411,24 +760,35 @@ class UIManager {
     const switchBtn = document.getElementById('btn-switch-user');
     if (switchBtn) { switchBtn.addEventListener('click', () => { window.location.href = '../index.html'; }); }
 
-    document.getElementById('btn-change-partner').addEventListener('click', () => this.changePartnerRandom());
-    document.getElementById('btn-start').addEventListener('click', () => { this.audio.unlock(); this.startBattle(); });
-    document.getElementById('btn-open-pokedex').addEventListener('click', () => this.showPokedex());
-    document.getElementById('btn-close-dex').addEventListener('click', () => document.getElementById('dex-modal').classList.remove('active'));
-    document.getElementById('dex-modal-overlay').addEventListener('click', () => document.getElementById('dex-modal').classList.remove('active'));
+    const changePartnerBtn = document.getElementById('btn-change-partner');
+    if (changePartnerBtn) changePartnerBtn.addEventListener('click', () => this.changePartnerRandom());
 
-    // 💡 關鍵修正：原本綁定監聽事件的地方，也同步由 '.btn-ans' 改為 '.btn-answer'
-    document.querySelectorAll('.btn-answer').forEach(btn => {
-      btn.addEventListener('click', (e) => this.handleAnswer(Number(e.currentTarget.dataset.idx)));
-    });
+    const startBtn = document.getElementById('btn-start');
+    if (startBtn) startBtn.addEventListener('click', () => { this.audio.unlock(); this.startBattle(); });
 
-    document.getElementById('btn-quit').addEventListener('click', () => { this.battle.stopTimer(); this.refreshHome(); this.showScreen('home-screen'); });
-    document.getElementById('btn-retry').addEventListener('click', () => this.startBattle());
-    document.getElementById('btn-home').addEventListener('click', () => { this.refreshHome(); this.showScreen('home-screen'); });
+    const openDexBtn = document.getElementById('btn-open-pokedex') || document.getElementById('btn-view-all-scores');
+    if (openDexBtn) openDexBtn.addEventListener('click', () => this.refreshHome() || document.getElementById('dex-modal')?.classList.add('active'));
+
+    const closeDexBtn = document.getElementById('btn-close-dex') || document.getElementById('modal-close');
+    if (closeDexBtn) closeDexBtn.addEventListener('click', () => document.getElementById('dex-modal')?.classList.remove('active'));
+
+    const dexOverlay = document.getElementById('dex-modal-overlay');
+    if (dexOverlay) dexOverlay.addEventListener('click', () => document.getElementById('dex-modal')?.classList.remove('active'));
+
+    const quitBtn = document.getElementById('btn-quit');
+    if (quitBtn) quitBtn.addEventListener('click', () => { this.battle.stopTimer(); this.refreshHome(); this.showScreen('home-screen'); });
+
+    const retryBtn = document.getElementById('btn-retry');
+    if (retryBtn) retryBtn.addEventListener('click', () => this.startBattle());
+
+    const homeBtn = document.getElementById('btn-home');
+    if (homeBtn) homeBtn.addEventListener('click', () => { this.refreshHome(); this.showScreen('home-screen'); });
   }
 }
 
+// ============================================================
 // 頁面載入完成初始化
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   const session = new PlayerSessionManager();
   const battle = new BattleEngine();
@@ -437,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ui.createStars();
 
-  const overlay = document.getElementById('loading-overlay') || document.querySelector('.loading-overlay');
+  const overlay = document.getElementById('loading-overlay');
   if (overlay) overlay.style.display = 'none';
 
   const last = localStorage.getItem('pokemon_math_last_trainer');
