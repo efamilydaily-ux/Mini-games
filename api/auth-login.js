@@ -11,8 +11,14 @@ export default async function handler(req, res) {
 
   const { trainerName, password, gameId, defaultData } = req.body;
 
+  // 1. 基礎欄位檢查
   if (!trainerName || !password || !gameId) {
     return res.status(400).json({ success: false, message: '請輸入完整的名字與密碼！' });
+  }
+
+  // 💡 2. 密碼長度驗證：最少 6 個字
+  if (password.length < 6) {
+    return res.status(400).json({ success: false, message: '密碼長度不能少於 6 個字！' });
   }
 
   const cleanName = trainerName.trim();
@@ -20,7 +26,7 @@ export default async function handler(req, res) {
   const dataKey = `E_House:${cleanName}:${gameId}`;
 
   try {
-    // 1. 檢查雲端有沒有這個帳號 (改用 redis.get)
+    // 檢查雲端有沒有這個帳號
     let account = await redis.get(accountKey);
 
     if (!account) {
@@ -32,7 +38,7 @@ export default async function handler(req, res) {
         token: mockToken
       };
       
-      // 寫入帳戶密碼，並同時初始化全新進度 (改用 redis.set)
+      // 寫入帳戶密碼，並同時初始化全新進度
       await redis.set(accountKey, account);
       await redis.set(dataKey, defaultData);
 
@@ -48,7 +54,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, message: '密碼不正確！如果是新玩家，請更換一個未被使用過的名字。' });
       }
 
-      // 密碼正確，讀取玩家當前遊戲進度 (改用 redis.get)
+      // 密碼正確，讀取玩家當前遊戲進度
       const gameData = await redis.get(dataKey);
 
       return res.status(200).json({
