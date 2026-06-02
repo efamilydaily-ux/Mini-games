@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>E家大小事 - 數感遊戲大廳</title>
+  <link rel="stylesheet" href="portal.css">
+</head>
+<body>
+
+<div class="stars" id="portal-stars"></div>
+
+<div class="portal-container">
+  <!-- 頂部 Logo 區塊 -->
+  <div class="portal-header">
+    <div class="brand-logo-wrap">
+      <img src="STK-20260402-WA0016.png" alt="E家大小事" class="brand-logo">
+    </div>
+    <h1 class="brand-title">E家大小事</h1>
+    <p class="brand-subtitle">🎮 兒童數感思維訓練中心 🎮</p>
+  </div>
+
+  <!-- 遊戲選擇選單 -->
+  <div class="games-grid">
+    
+    <!-- 遊戲 1: 寶可夢數感訓練所 -->
+    <a href="./pokemon-math/index.html" class="game-card pokemon-theme">
+      <div class="game-badge">HOT</div>
+      <div class="game-icon">⚡</div>
+      <div class="game-details">
+        <h2 class="game-name">寶可夢心算訓練所</h2>
+        <p class="game-desc">100%進退位心算速擊！解鎖 151 隻全圖鑑，與伴侶寶可夢一同出戰！</p>
+        <span class="btn-enter-game">立即出發 ➔</span>
+      </div>
+    </a>
+
+    <!-- 遊戲 2: 未來預留位置 -->
+    <div class="game-card coming-soon">
+      <div class="game-icon">🔒</div>
+      <div class="game-details">
+        <h2 class="game-name">新遊戲期待中...</h2>
+        <p class="game-desc">更多為 Emma 和 Elly 量身打造的趣味學科對戰遊戲即將解鎖！</p>
+        <span class="btn-enter-game disabled">敬請期待</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // 簡單的大廳背景星星特效
+  const container = document.getElementById('portal-stars');
+  for (let i = 0; i < 30; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 2 + 1;
+    star.style.cssText = `
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      width: ${size}px;
+      height: ${size}px;
+      left: ${Math.random() * 100}%;
+      top: ${Math.random() * 100}%;
+      opacity: ${Math.random() * 0.6 + 0.2};
+    `;
+    container.appendChild(star);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "pokemon-math/api/*.js": {
+      "runtime": "vercel-node@latest"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/pokemon-math/$1"
+    }
+  ]
+}
