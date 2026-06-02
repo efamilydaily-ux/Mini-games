@@ -25,10 +25,10 @@ const POKE_NAMES_MAP = {
   107:'快拳郎', 108:'大舌頭', 109:'瓦斯彈', 110:'毒瓦斯', 111:'獨角犀牛',
   112:'大犀牛', 113:'吉利蛋', 114:'蔓藤怪', 115:'袋獸', 116:'墨海馬',
   117:'海刺龍', 118:'角金魚', 119:'金魚王', 120:'海星星', 121:'刺刺海星',
-  122:'魔因特', 123:'飛天螳螂', 124:'迷唇姐', 125:'電擊獸', 126:'鴨嘴火獸',
-  127:'鉗形炮', 128:'肯泰羅', 129:'鯉魚王', 130:'暴鯉龍', 131:'乘龍',
+  122:'魔牆人偶', 123:'飛天螳螂', 124:'迷唇姐', 125:'電擊獸', 126:'鴨嘴火獸',
+  127:'大甲', 128:'肯泰羅', 129:'鯉魚王', 130:'暴鯉龍', 131:'乘龍',
   132:'百變怪', 133:'伊布', 134:'水伊布', 135:'雷伊布', 136:'火伊布',
-  137:'多邦', 138:'菊石獸', 139:'多刺菊石獸', 140:'化石盔', 141:'多刺化石盔',
+  137:'多邊獸', 138:'菊石獸', 139:'多刺菊石獸', 140:'化石盔', 141:'鐮刀盔',
   142:'化石翼龍', 143:'卡比獸', 144:'急凍鳥', 145:'閃電鳥', 146:'火焰鳥',
   147:'迷你龍', 148:'哈克龍', 149:'快龍', 150:'超夢', 151:'夢幻'
 };
@@ -43,7 +43,7 @@ for (let i = 1; i <= TOTAL; i++) {
 }
 
 // ============================================================
-// CLASS: GameDataManager — 雲端資料庫存取
+// CLASS: GameDataManager — 雲端資料庫存取（只有觸發時才連線）
 // ============================================================
 class GameDataManager {
   static get GAME_ID() { return 'pokemon-math'; }
@@ -58,7 +58,7 @@ class GameDataManager {
     };
   }
 
-  // 💡 向後端發送登入/註冊請求
+  // 💡 只有當玩家輸入完名、密碼，點擊登入時，才會執行的網絡請求
   static async loginRemote(trainerName, password) {
     try {
       const res = await fetch('/api/auth-login', {
@@ -72,7 +72,7 @@ class GameDataManager {
         })
       });
       const result = await res.json();
-      if (!res.ok || !result.success) throw new Error(result.message || '雲端服務器連線失敗');
+      if (!res.ok || !result.success) throw new Error(result.message || '雲端服務器驗證失敗');
       return {
         gameData: result.data || this.getDefaultState(),
         token: result.token
@@ -83,7 +83,6 @@ class GameDataManager {
     }
   }
 
-  // 💡 自動同步數據到雲端 Upstash DB
   static async saveRemote(trainerName, token, state) {
     if (!token) return;
     try {
@@ -112,7 +111,7 @@ class GameDataManager {
 }
 
 // ============================================================
-// CLASS: PlayerSessionManager — 狀態同步
+// CLASS: PlayerSessionManager — 玩家狀態
 // ============================================================
 class PlayerSessionManager {
   constructor() {
@@ -170,7 +169,7 @@ class PlayerSessionManager {
 }
 
 // ============================================================
-// CLASS: BattleEngine — 完美保留 10 題制玩法（對8題才贏，且排除已捕獲對手）
+// CLASS: BattleEngine — 完美保留 10 題賽制玩法（對8題才贏）
 // ============================================================
 class BattleEngine {
   constructor() {
@@ -185,11 +184,9 @@ class BattleEngine {
   }
 
   reset(uncaughtPokemons) {
-    // 💡 核心過濾：只抽還沒抓到的對手，抓完了才在全圖鑑抽
     const pool = uncaughtPokemons.length > 0 ? uncaughtPokemons : ALL_POKEMONS;
     this.wildPokemon = pool[Math.floor(Math.random() * pool.length)];
 
-    // 💡 10題挑戰賽制
     this.questions = Array.from({ length: 10 }, () => this.generateQuestion());
     this.current = 0;
     this.correct = 0;
@@ -239,7 +236,7 @@ class BattleEngine {
 
   currentQuestion() { return this.questions[this.current]; }
   isFinished() { return this.current >= 10; }
-  isWin() { return this.correct >= 8; } // 💡 滿 10 題對 8 題判定
+  isWin() { return this.correct >= 8; }
 
   startTimer(secs, onTick, onTimeout) {
     clearInterval(this.timerInterval);
@@ -280,7 +277,7 @@ class BattleEngine {
 }
 
 // ============================================================
-// CLASS: AudioEngine — 音效引擎
+// CLASS: AudioEngine — 音效
 // ============================================================
 class AudioEngine {
   constructor() { this._ctx = null; }
@@ -328,7 +325,7 @@ class AudioEngine {
 }
 
 // ============================================================
-// CLASS: UIManager — 修正按鈕類名，確保 UI 完美漂亮
+// CLASS: UIManager — 修正按鈕、同步原本 HTML 的 Screen ID
 // ============================================================
 class UIManager {
   constructor(session, battle, audio) {
@@ -340,7 +337,10 @@ class UIManager {
 
   showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.add('active');
+    }
     window.scrollTo(0, 0);
   }
 
@@ -367,13 +367,21 @@ class UIManager {
 
   refreshHome() {
     const s = this.session;
-    document.getElementById('trainer-info-tag').textContent = `🎯 訓練員: ${s.currentName}`;
-    document.getElementById('partner-label-text').textContent = `🌟 ${s.currentName} 的伴侶`;
+    // 💡 確保原本主畫面的頂部訓練員資訊、圖鑑完美更新
+    const tag = document.getElementById('trainer-info-tag') || document.getElementById('trainer-name-display');
+    if (tag) tag.textContent = `🎯 訓練員: ${s.currentName}`;
+    
+    const label = document.getElementById('partner-label-text');
+    if (label) label.textContent = `🌟 ${s.currentName} 的伴侶`;
 
     const partnerData = ALL_POKEMONS.find(p => p.id === s.state.partnerId);
     const partnerName = partnerData?.name || '皮卡丘';
-    document.getElementById('partner-sprite').src = getSprite(s.state.partnerId);
-    document.getElementById('partner-name').textContent = partnerName;
+    
+    const spriteImg = document.getElementById('partner-sprite');
+    if (spriteImg) spriteImg.src = getSprite(s.state.partnerId);
+    
+    const nameTxt = document.getElementById('partner-name');
+    if (nameTxt) nameTxt.textContent = partnerName;
 
     this._renderPokedex();
     this._updateStats();
@@ -416,15 +424,22 @@ class UIManager {
 
   _updateStats() {
     const s = this.session;
-    document.getElementById('stat-caught').textContent = `${s.getCaughtCount()} / ${TOTAL}`;
-    document.getElementById('stat-battles').textContent = s.state.totalBattles;
-    const acc = s.getAccuracy();
-    document.getElementById('stat-acc').textContent = acc !== null ? acc + '%' : '-%';
+    const sCaught = document.getElementById('stat-caught');
+    if (sCaught) sCaught.textContent = `${s.getCaughtCount()} / ${TOTAL}`;
+    
+    const sBattles = document.getElementById('stat-battles');
+    if (sBattles) sBattles.textContent = s.state.totalBattles;
+    
+    const sAcc = document.getElementById('stat-acc');
+    if (sAcc) {
+      const acc = s.getAccuracy();
+      sAcc.textContent = acc !== null ? acc + '%' : '-%';
+    }
   }
 
   changePartnerRandom() {
     const caughtIds = this.session.getCaughtIds();
-    if (caughtIds.length <= 1) { alert('你目前只有一隻寶可夢，快挑戰對戰來捕獲更多吧！'); return; }
+    if (caughtIds.length <= 1) { alert('你目前只有一隻寶可夢，快進行對戰來捕獲更多吧！'); return; }
     let current = this.session.state.partnerId;
     let next = current;
     while (next === current) {
@@ -453,8 +468,10 @@ class UIManager {
   }
 
   _setEnergy(pct) {
-    document.getElementById('energy-fill').style.width = pct + '%';
-    document.getElementById('energy-pct').textContent = pct + '%';
+    const fill = document.getElementById('energy-fill');
+    const txt = document.getElementById('energy-pct');
+    if (fill) fill.style.width = pct + '%';
+    if (txt) txt.textContent = pct + '%';
   }
 
   _renderChips(results) {
@@ -481,7 +498,7 @@ class UIManager {
     grid.innerHTML = '';
     q.options.forEach(opt => {
       const btn = document.createElement('button');
-      // 💡 關鍵修正：改回你原本 HTML 綁定的精美類名 'btn-answer'，按鈕立刻恢復漂亮外觀！
+      // 💡 完美還原你最靚嘅按鈕 Class
       btn.className = 'btn-answer';
       btn.textContent = opt;
       btn.addEventListener('click', () => this._handleAnswer(opt, q, btn));
@@ -598,6 +615,8 @@ class UIManager {
     const pokeball = document.getElementById('pokeball');
     const flash = document.getElementById('capture-flash');
 
+    if (!overlay) { this.showScreen('result-screen'); return; }
+
     capSprite.src = getSprite(pokemon.id);
     capSprite.classList.remove('sucked');
     capText.textContent = '精靈球捕捉充能完畢！';
@@ -624,124 +643,83 @@ class UIManager {
     }, 1000);
   }
 
-  showPlayersModal() {
-    const modal = document.getElementById('players-modal');
-    const body = document.getElementById('modal-body');
-    if (!body || !modal) return;
-    body.innerHTML = '';
-
-    const localList = JSON.parse(localStorage.getItem('pkmnMath_player_list') || '[]');
-
-    if (localList.length === 0) {
-      body.innerHTML = '<div class="modal-empty">📭 尚無本機快捷訓練員紀錄</div>';
-    } else {
-      localList.forEach(name => {
-        const card = document.createElement('div');
-        card.className = 'player-card';
-        card.innerHTML = `
-          <div class="player-avatar">🎯</div>
-          <div class="player-info">
-            <div class="player-name">${this._esc(name)}</div>
-            <div class="player-stats-mini">
-              <span class="player-stat-badge highlight">本機快取帳戶</span>
-            </div>
-          </div>
-          <button class="btn-quick-login" data-name="${this._esc(name)}">填入</button>
-        `;
-        body.appendChild(card);
-      });
-
-      body.querySelectorAll('.btn-quick-login').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.getElementById('trainer-name-input').value = btn.dataset.name;
-          this.hidePlayersModal();
-        });
+  _bindAll() {
+    // 💡 點擊原本 HTML 的「開始冒險」按鈕，才觸發登入連線
+    const startBtn = document.getElementById('btn-start');
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        this.audio.unlock();
+        this._doLoginAndStart();
       });
     }
-    modal.classList.add('active');
+
+    // 其他原有控制綁定
+    const quitBtn = document.getElementById('btn-quit');
+    if (quitBtn) {
+      quitBtn.addEventListener('click', () => {
+        this.battle.stopTimer();
+        this.refreshHome();
+        this.showScreen('home-screen');
+      });
+    }
+
+    const retryBtn = document.getElementById('btn-retry');
+    if (retryBtn) retryBtn.addEventListener('click', () => this.startBattle());
+
+    const homeBtn = document.getElementById('btn-home');
+    if (homeBtn) {
+      homeBtn.addEventListener('click', () => {
+        this.refreshHome();
+        this.showScreen('home-screen');
+      });
+    }
+
+    const changePartnerBtn = document.getElementById('btn-change-partner');
+    if (changePartnerBtn) {
+      changePartnerBtn.addEventListener('click', () => this.changePartnerRandom());
+    }
   }
 
-  hidePlayersModal() {
-    document.getElementById('players-modal').classList.remove('active');
-  }
-
-  _esc(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  _bindAll() {
-    document.getElementById('btn-login-submit').addEventListener('click', () => {
-      this.audio.unlock();
-      this._doLogin();
-    });
+  // 💡 核心登入與啟動邏輯
+  async _doLoginAndStart() {
+    const nameInput = document.getElementById('trainer-name-input');
+    const name = nameInput ? nameInput.value.trim() : '';
     
-    document.getElementById('btn-view-all-scores').addEventListener('click', () => this.showPlayersModal());
-    document.getElementById('modal-close').addEventListener('click', () => this.hidePlayersModal());
-    document.getElementById('players-modal').addEventListener('click', e => {
-      if (e.target === document.getElementById('players-modal')) this.hidePlayersModal();
-    });
-
-    document.getElementById('btn-switch-user').addEventListener('click', () => {
-      document.getElementById('trainer-name-input').value = this.session.currentName === '玩家' ? '' : this.session.currentName;
-      this.showScreen('login-screen');
-    });
-    
-    document.getElementById('btn-change-partner').addEventListener('click', () => this.changePartnerRandom());
-    document.getElementById('btn-start').addEventListener('click', () => {
-      this.audio.unlock();
-      this.startBattle();
-    });
-
-    document.getElementById('btn-quit').addEventListener('click', () => {
-      this.battle.stopTimer();
-      this.refreshHome();
-      this.showScreen('home-screen');
-    });
-
-    document.getElementById('btn-retry').addEventListener('click', () => this.startBattle());
-    document.getElementById('btn-home').addEventListener('click', () => {
-      this.refreshHome();
-      this.showScreen('home-screen');
-    });
-  }
-
-  async _doLogin() {
-    const name = document.getElementById('trainer-name-input').value.trim();
-    const password = document.getElementById('trainer-password-input')?.value?.trim() || '';
+    // 如果你有加密碼輸入框，就讀取；如果無，預設為 '1234'
+    const pwdInput = document.getElementById('trainer-password-input');
+    const password = pwdInput ? pwdInput.value.trim() : '1234';
 
     if (!name) { alert('請輸入訓練員名字！'); return; }
-    if (!password) { alert('請輸入密碼！'); return; }
 
+    // 1. 打開連線遮罩
     const loadingOverlay = document.getElementById('loading-overlay') || document.querySelector('.loading-overlay');
     if (loadingOverlay) {
       loadingOverlay.style.display = 'flex';
       const p = loadingOverlay.querySelector('p');
-      if (p) p.textContent = 'E家雲端連線中...';
+      if (p) p.textContent = '寶可夢雲端同步中...';
     }
 
-    const loginBtn = document.getElementById('btn-login-submit');
-    if (loginBtn) loginBtn.disabled = true;
-
+    // 2. 去連線 Upstash DB 讀取進度
     const success = await this.session.loginWithCloud(name, password);
     
-    if (loginBtn) loginBtn.disabled = false;
+    // 3. 關閉遮罩
     if (loadingOverlay) loadingOverlay.style.display = 'none';
 
     if (success) {
-      let localList = JSON.parse(localStorage.getItem('pkmnMath_player_list') || '[]');
-      if (!localList.includes(name)) {
-        localList.push(name);
-        localStorage.setItem('pkmnMath_player_list', JSON.stringify(localList));
-      }
-      
+      // 4. 同步成功，直接幫他開始對戰！
       this.refreshHome();
-      this.showScreen('home-screen');
+      this.startBattle();
+    } else {
+      // 連線失敗的話，至少用本地預設狀態讓他能玩
+      this.session.currentName = name;
+      this.refreshHome();
+      this.startBattle();
     }
   }
 }
 
 // ============================================================
-// 初始化
+// 初始化：網頁一開完全不連 DB，直接秒開
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   const session = new PlayerSessionManager();
@@ -751,14 +729,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ui.createStars();
 
+  // 自動填入上次玩過的名字
   const last = GameDataManager.getLastTrainer();
-  if (last && last !== '玩家') {
-    const input = document.getElementById('trainer-name-input');
-    if (input) input.value = last;
+  const input = document.getElementById('trainer-name-input');
+  if (last && input) {
+    input.value = last === '玩家' ? '' : last;
   }
 
+  // 強制隱藏所有 Loading，直接露出最乾淨的主畫面（首頁）
   const loadingOverlay = document.getElementById('loading-overlay') || document.querySelector('.loading-overlay');
   if (loadingOverlay) loadingOverlay.style.display = 'none';
 
-  ui.showScreen('login-screen');
+  // 原汁原味：一開波顯示你的主頁面 `home-screen`
+  ui.showScreen('home-screen');
 });
