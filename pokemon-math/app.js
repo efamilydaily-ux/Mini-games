@@ -21,7 +21,7 @@ const POKE_NAMES_MAP = {
   85:'嘟嘟利', 86:'小海獅', 87:'白海獅', 88:'臭泥', 89:'臭臭泥', 90:'大舌貝',
   91:'刺甲貝', 92:'鬼斯', 93:'鬼斯通', 94:'耿鬼', 95:'大岩蛇', 96:'催眠貘',
   97:'引夢貘人', 98:'大鉗蟹', 99:'巨鉗蟹', 100:'霹靂電球', 101:'頑皮雷彈',
-  102:'蛋蛋', 103:'椰蛋樹', 104:'卡拉卡拉', 105:'嘎拉嘎拉', 106:'飛腿郎',
+  102:'蛋蛋', 103:'椰蛋樹', 104:'卡拉卡拉', 105:'嘎啦嘎啦', 106:'飛腿郎',
   107:'快拳郎', 108:'大舌頭', 109:'瓦斯彈', 110:'雙彈瓦斯', 111:'獨角犀牛',
   112:'鑽角犀獸', 113:'吉利蛋', 114:'蔓藤怪', 115:'袋獸', 116:'墨海馬',
   117:'海刺龍', 118:'角金魚', 119:'金魚王', 120:'海星星', 121:'寶石海星',
@@ -57,7 +57,6 @@ class GameDataManager {
 
   static async loginOrRegisterRemote(trainerName, password) {
     try {
-      // 💡 保持正確的 Vercel 路由路徑
       const res = await fetch('/api/auth-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -270,14 +269,12 @@ class UIManager {
   }
 
   nextQuestion() {
-    // 💡 檢查是否已經答滿 10 題
     if (this.qCount >= 10) {
       this.endBattle();
       return;
     }
 
     this.qCount++;
-    // 更新局內進度提示（例如：第 1 / 10 題）
     const scoreEl = document.getElementById('battle-score');
     if (scoreEl) scoreEl.textContent = `題目：${this.qCount} / 10 | 正確：${this.cCount}`;
 
@@ -288,13 +285,13 @@ class UIManager {
     document.getElementById('enemy-sprite').src = `${this.spriteBase}${wild.id}.png`;
     document.getElementById('question-text').textContent = this.currentQuestion.text;
 
-    // 美化後的按鈕渲染
-    const btns = document.querySelectorAll('.btn-ans');
+    // 💡 關鍵修正：將 'btn-ans' 改回你 HTML 本來的精美 Class 'btn-answer'！
+    const btns = document.querySelectorAll('.btn-answer');
     this.currentQuestion.options.forEach((val, i) => {
       if (btns[i]) { 
         btns[i].textContent = val; 
-        btns[i].className = 'btn-ans'; 
-        btns[i].style.transform = 'none'; // 重置動畫效果
+        btns[i].className = 'btn-answer'; 
+        btns[i].style.transform = 'none'; 
       }
     });
 
@@ -303,7 +300,6 @@ class UIManager {
         document.getElementById('battle-time').textContent = sec.toFixed(1) + 's';
         document.getElementById('timer-fill').style.width = (sec / 5.0 * 100) + '%';
       },
-      // 逾時沒答，當作答錯，但依然繼續下一題，直到滿 10 題
       () => { 
         this.audio.play('wrong'); 
         this.nextQuestion(); 
@@ -313,7 +309,7 @@ class UIManager {
 
   handleAnswer(idx) {
     this.battle.stopTimer();
-    const btns = document.querySelectorAll('.btn-ans');
+    const btns = document.querySelectorAll('.btn-answer');
     const selected = this.currentQuestion.options[idx];
     const isCorrect = (selected === this.currentQuestion.answer);
 
@@ -328,7 +324,6 @@ class UIManager {
       this.audio.play('wrong'); 
     }
     
-    // 留下一小段時間給玩家看對錯反饋，隨即切換下一題
     setTimeout(() => this.nextQuestion(), 600);
   }
 
@@ -340,7 +335,6 @@ class UIManager {
     document.getElementById('res-details-count').textContent = `${this.cCount} / ${this.qCount}`;
     document.getElementById('res-details-acc').textContent = (this.qCount > 0 ? Math.round(this.cCount / this.qCount * 100) : 0) + '%';
 
-    // 💡 終極規則判斷：答對 8 題以上（包含 8 題）
     if (this.cCount >= 8) {
       const uncaught = this.session.getUncaughtPokemons();
       if (uncaught.length > 0) {
@@ -363,7 +357,6 @@ class UIManager {
         return;
       }
     } else {
-      // 答對不滿 8 題的提示訊息
       const capText = document.getElementById('capture-text');
       if (capText) capText.innerHTML = `可惜！只答對了 ${this.cCount} 題。<br>需要答對 8 題以上才能捕捉喔！繼續加油！`;
     }
@@ -424,7 +417,8 @@ class UIManager {
     document.getElementById('btn-close-dex').addEventListener('click', () => document.getElementById('dex-modal').classList.remove('active'));
     document.getElementById('dex-modal-overlay').addEventListener('click', () => document.getElementById('dex-modal').classList.remove('active'));
 
-    document.querySelectorAll('.btn-ans').forEach(btn => {
+    // 💡 關鍵修正：原本綁定監聽事件的地方，也同步由 '.btn-ans' 改為 '.btn-answer'
+    document.querySelectorAll('.btn-answer').forEach(btn => {
       btn.addEventListener('click', (e) => this.handleAnswer(Number(e.currentTarget.dataset.idx)));
     });
 
