@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+TC:wght@700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght=700;800;900&family=Noto+Sans+TC:wght=700;900&display=swap');
 
 :root {
   --red: #E3350D;
@@ -32,592 +32,630 @@ body {
   color: var(--text);
   min-height: 100dvh;
   overflow-x: hidden;
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 60% 80%, rgba(227,53,13,0.08) 0%, transparent 50%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
-/* ========== STAR BACKGROUND ========== */
+/* ============================================================
+   星空背景
+   ============================================================ */
 .stars {
-  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
 }
 .star {
-  position: absolute; background: white; border-radius: 50%;
-  animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s);
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: twinkle var(--dur) infinite ease-in-out var(--delay);
 }
 @keyframes twinkle {
-  0%,100% { opacity: 0.1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.3); }
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 0.9; transform: scale(1.2); }
 }
 
-/* ========== SCREENS ========== */
-.screen {
-  display: none; /* 💡 預設完全隱藏，不影響排版 */
-  position: relative; 
-  z-index: 1; 
+/* 主容器 */
+.app-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
   min-height: 100dvh;
-  flex-direction: column; 
-  align-items: center; 
-  width: 100%; 
-  max-width: 440px;
-  margin: 0 auto; 
-  padding: 16px;
-  box-sizing: border-box;
-}
-.screen.active { 
-  display: flex; 
+  background: rgba(22, 33, 62, 0.85);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid rgba(255,255,255,0.1);
+  border-right: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  flex-direction: column;
 }
 
-/* ========== SCREEN 0: LOGIN SCREEN ========== */
-#login-screen {
-  justify-content: center;
-  padding: 20px;
+/* 頁面切換 */
+.screen {
+  display: none;
+  flex-direction: column;
+  width: 100%;
+  padding: 16px;
+  animation: fadeIn 0.4s ease both;
 }
+.screen.active {
+  display: flex;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   1. 登入畫面
+   ============================================================ */
 .login-logo {
   text-align: center;
-  margin-bottom: 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  margin: 50px 0 25px;
 }
 .login-pokeball-icon {
+  display: inline-block;
   animation: float 3s ease-in-out infinite;
-  filter: drop-shadow(0 4px 16px rgba(227,53,13,0.4));
 }
-.login-title {
-  font-size: 32px;
-  font-weight: 900;
-  line-height: 1.2;
-  background: linear-gradient(135deg, var(--yellow), var(--gold), var(--red));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 2px 8px rgba(255,165,0,0.4));
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
 }
-.login-subtitle {
-  font-size: 13px;
-  color: var(--text-dim);
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-.login-box {
-  width: 92%;
-  max-width: 340px;
-  background: linear-gradient(135deg, rgba(22,33,62,0.95), rgba(15,52,96,0.95));
-  border: 2px solid rgba(59,130,246,0.5);
-  border-radius: 20px;
-  padding: 24px 20px;
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-.login-box-title {
-  font-size: 15px;
-  font-weight: 800;
-  color: #60a5fa;
-  letter-spacing: 0.5px;
-}
-
-/* ========== SCREEN 1: HOME SCREEN ========== */
-#home-screen { padding-top: 10px; padding-bottom: 30px; }
-
-.trainer-header-bar {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(255,255,255,0.05);
-  padding: 8px 14px;
-  border-radius: 12px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(255,255,255,0.05);
-}
-.trainer-info-tag { font-size: 13px; font-weight: 800; color: #60a5fa; }
-
-.home-header { text-align: center; padding: 5px 0; width: 100%; }
-.home-title {
-  font-size: clamp(26px, 7vw, 34px); font-weight: 900; line-height: 1.15;
-  background: linear-gradient(135deg, var(--yellow), var(--gold), var(--red));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; filter: drop-shadow(0 2px 6px rgba(255,165,0,0.3));
-}
-
-/* Partner Pokemon */
-.partner-area { display: flex; flex-direction: column; align-items: center; margin: 10px 0; position: relative; }
-.partner-label { font-size: 12px; color: var(--yellow); font-weight: 800; letter-spacing: 0.5px; margin-bottom: 2px; }
-.partner-sprite-wrap { position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; }
-.partner-glow { position: absolute; width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,0.2), transparent 70%); animation: pulse-glow 2s ease-in-out infinite; }
-@keyframes pulse-glow { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.2); opacity: 1; } }
-.partner-sprite { width: 105px; height: 105px; image-rendering: pixelated; animation: float 3s ease-in-out infinite; position: relative; z-index: 1; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4)); }
-.partner-sprite.bounce { animation: bounce-anim 0.6s ease !important; }
-.partner-sprite.shake { animation: shake-anim 0.5s ease !important; }
-.partner-name { font-size: 19px; font-weight: 900; color: var(--yellow); margin-top: 2px; }
-.btn-change-partner { font-size: 11px; background: rgba(255,255,255,0.08); border: none; padding: 4px 12px; color: var(--text-dim); border-radius: 50px; margin-top: 6px; cursor: pointer; font-weight: 800; font-family: inherit; }
-
-/* Start button */
-.btn-start {
-  background: linear-gradient(135deg, var(--red), #ff5722); color: white; border: none; border-radius: 50px;
-  padding: 14px 40px; font-size: 20px; font-weight: 900; font-family: inherit; cursor: pointer;
-  box-shadow: 0 5px 0 var(--dark-red), 0 6px 20px rgba(227,53,13,0.35); transition: transform 0.1s, box-shadow 0.1s;
-  margin: 10px 0; width: 100%;
-}
-.btn-start:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--dark-red), 0 3px 10px rgba(227,53,13,0.25); }
-
-/* Stats bar */
-.stats-row { display: flex; gap: 8px; width: 100%; margin: 4px 0; }
-.stat-card { flex: 1; background: var(--surface); border-radius: 14px; padding: 8px 4px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-.stat-val { font-size: 18px; font-weight: 900; color: var(--yellow); }
-.stat-lbl { font-size: 11px; color: var(--text-dim); font-weight: 700; }
-
-/* ========== POKEDEX GRID IN MODAL ========== */
-.pokedex-section { width: 100%; margin-top: 14px; }
-.pokedex-title { font-size: 14px; font-weight: 900; color: var(--text-dim); letter-spacing: 0.5px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-.pokedex-title::before { content: '📖'; font-size: 15px; }
-.pokedex-hint { font-size: 11px; color: rgba(255,215,0,0.5); font-weight: 700; margin-bottom: 8px; }
-
-.pokedex-grid { 
-  display: grid; 
-  grid-template-columns: repeat(4, 1fr); 
-  gap: 10px; 
-  padding: 10px;
-  overflow-y: auto; 
-}
-.pokedex-grid::-webkit-scrollbar { width: 4px; }
-.pokedex-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
-.pokedex-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-
-.dex-card { background: var(--surface); border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 2px solid transparent; position: relative; }
-.dex-card.caught { border-color: var(--yellow); background: linear-gradient(135deg, var(--surface), rgba(255,215,0,0.05)); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-.dex-card.caught:active { transform: scale(0.93); }
-.dex-card.caught.active-partner { border-color: var(--red); background: linear-gradient(135deg, var(--surface), rgba(227,53,13,0.1)); box-shadow: 0 0 12px rgba(227,53,13,0.4); }
-.dex-img { width: 56px; height: 56px; image-rendering: pixelated; }
-.dex-img.silhouette { filter: brightness(0) contrast(1); opacity: 0.25; }
-.dex-name { font-size: 11px; font-weight: 800; color: var(--text-dim); text-align: center; }
-.dex-card.caught .dex-name { color: var(--yellow); }
-.dex-card.caught.active-partner .dex-name { color: var(--red); }
-.dex-count { position: absolute; bottom: 2px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 8px; padding: 1px 4px; border-radius: 6px; font-weight: 900; }
-
-/* ========== BATTLE SCREEN ========== */
-#battle-screen { gap: 8px; padding-top: 15px; }
-.battle-header { display: flex; align-items: center; gap: 10px; width: 100%; }
-.battle-round-info { flex: 1; }
-.battle-round-text { font-size: 13px; color: var(--text-dim); font-weight: 800; }
-.battle-q-num { font-size: 18px; font-weight: 900; color: var(--text); }
-.btn-quit { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: var(--text-dim); border-radius: 10px; padding: 6px 12px; font-size: 13px; font-weight: 800; cursor: pointer; font-family: inherit; }
-
-.energy-section { width: 100%; }
-.energy-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: var(--yellow); margin-bottom: 4px; }
-.energy-track { width: 100%; height: 14px; background: rgba(255,255,255,0.07); border-radius: 50px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-.energy-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #86efac, #fbbf24); border-radius: 50px; transition: width 0.4s ease; box-shadow: 0 0 12px rgba(34,197,94,0.5); }
-
-.battle-pokemon-row { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px; margin: 2px 0; }
-.battle-sprite-area { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
-.battle-sprite { width: 80px; height: 80px; image-rendering: pixelated; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); animation: float 3s ease-in-out infinite; }
-.battle-sprite.bounce { animation: bounce-anim 0.6s ease !important; }
-.battle-sprite.shake { animation: shake-anim 0.5s ease !important; }
-.wild-sprite { width: 80px; height: 80px; image-rendering: pixelated; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); animation: float 2.5s ease-in-out infinite 0.5s; }
-.wild-sprite.bounce { animation: bounce-anim 0.6s ease !important; }
-.wild-sprite.shake { animation: shake-anim 0.5s ease !important; }
-.battle-poke-name { font-size: 12px; font-weight: 800; color: var(--yellow); text-align: center; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vs-badge { font-size: 22px; font-weight: 900; color: var(--red); text-shadow: 0 0 16px rgba(227,53,13,0.5); flex-shrink: 0; }
-
-.timer-section { width: 100%; }
-.timer-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); font-weight: 800; margin-bottom: 2px; }
-.timer-track { width: 100%; height: 8px; background: rgba(255,255,255,0.07); border-radius: 50px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-.timer-fill { height: 100%; border-radius: 50px; transition: width 0.05s linear; background: var(--green); }
-.timer-fill.warning { background: var(--gold); }
-.timer-fill.danger { background: var(--red); box-shadow: 0 0 8px rgba(227,53,13,0.6); }
-
-.question-card { width: 100%; background: var(--surface); border-radius: var(--radius); padding: 16px 12px; text-align: center; border: 1px solid rgba(255,255,255,0.08); box-shadow: var(--shadow); }
-.question-text { font-size: clamp(34px, 10vw, 46px); font-weight: 900; color: white; text-shadow: 0 0 25px rgba(255,255,255,0.2); }
-.question-hint { font-size: 12px; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
-
-.btn-answer { background: var(--surface2); border: 2px solid rgba(255,255,255,0.1); color: white; border-radius: var(--radius); padding: 12px 4px; font-size: 24px; font-weight: 900; font-family: inherit; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.3); }
-.btn-answer:disabled { opacity: 0.8; color: white; }
-.btn-answer.correct { background: linear-gradient(135deg, var(--green), var(--dark-green)) !important; border-color: #86efac !important; box-shadow: 0 0 20px rgba(34,197,94,0.5) !important; color: white !important; }
-.btn-answer.wrong { background: linear-gradient(135deg, var(--red), var(--dark-red)) !important; border-color: #fca5a5 !important; box-shadow: 0 0 20px rgba(227,53,13,0.4) !important; color: white !important; }
-
-.score-chips { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; margin-top: 4px; }
-.chip { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; }
-.chip.correct { background: var(--green); border-color: #86efac; color: white; }
-.chip.wrong { background: var(--red); border-color: #fca5a5; color: white; }
-
-/* ========== RESULT SCREEN ========== */
-#result-screen { padding: 25px 16px; justify-content: center; gap: 10px; }
-.result-title { font-size: clamp(30px, 8vw, 40px); font-weight: 900; }
-.result-title.win { background: linear-gradient(135deg, var(--yellow), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 2px 12px rgba(255,165,0,0.5)); }
-.result-title.lose { color: var(--text-dim); }
-.result-score { font-size: 17px; color: var(--text-dim); font-weight: 800; }
-.result-score span { color: var(--yellow); font-size: 22px; }
-.result-pokemon-area { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 8px 0; }
-.result-sprite { width: 110px; height: 110px; image-rendering: pixelated; filter: drop-shadow(0 6px 20px rgba(0,0,0,0.5)); }
-.result-pokemon-name { font-size: 19px; font-weight: 900; color: var(--yellow); }
-.result-catch-msg { font-size: 13px; color: var(--text-dim); font-weight: 800; max-width: 280px; text-align: center; }
-.btn-retry { background: linear-gradient(135deg, var(--blue), var(--dark-blue)); color: white; border: none; border-radius: 50px; padding: 14px 40px; font-size: 18px; font-weight: 900; font-family: inherit; cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,0.3); width: 100%; }
-.btn-home { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: var(--text-dim); border-radius: 50px; padding: 10px 32px; font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer; width: 100%; margin-top: 2px; }
-
-/* ========== CAPTURE OVERLAY ========== */
-.capture-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
-.capture-overlay.active { display: flex; }
-.capture-pokemon-sprite { width: 120px; height: 120px; image-rendering: pixelated; filter: drop-shadow(0 0 30px rgba(255,215,0,0.8)); animation: float 2s ease-in-out infinite; }
-.capture-pokemon-sprite.sucked { transform: scale(0) translateY(100px); opacity: 0; transition: all 0.4s ease-in; }
-.pokeball-container { position: relative; width: 90px; height: 90px; }
-.pokeball { width: 90px; height: 90px; }
-.pokeball.shake { animation: poke-shake 0.4s ease-in-out 3; }
-@keyframes poke-shake { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-20deg); } 75% { transform: rotate(20deg); } }
-.pokeball svg { width: 100%; height: 100%; }
-.capture-flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1001; }
-.capture-flash.flash { animation: flash-anim 0.6s ease forwards; }
-@keyframes flash-anim { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
-.capture-text { font-size: 22px; font-weight: 900; color: var(--yellow); text-shadow: 0 0 20px rgba(255,215,0,0.6); text-align: center; padding: 0 10px; }
-
-/* ========== ALL PLAYERS MODAL ========== */
-.modal-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
-  z-index: 500; align-items: flex-end; justify-content: center;
-}
-.modal-overlay.active { display: flex; }
-.modal-panel {
-  width: 100%; max-width: 440px; max-height: 80dvh;
-  background: linear-gradient(160deg, #16213e, #0f3460);
-  border-radius: 24px 24px 0 0;
-  border-top: 2px solid rgba(59,130,246,0.4);
-  display: flex; flex-direction: column;
-  animation: slide-up 0.3s ease;
-}
-@keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 12px; border-bottom: 1px solid rgba(255,255,255,0.07);
-  flex-shrink: 0;
-}
-.modal-title { font-size: 18px; font-weight: 900; color: var(--yellow); }
-.modal-close {
-  background: rgba(255,255,255,0.08); border: none; color: var(--text-dim);
-  border-radius: 50%; width: 32px; height: 32px; font-size: 14px; font-weight: 900;
-  cursor: pointer; font-family: inherit;
-}
-.modal-body { overflow-y: auto; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 10px; }
-.modal-body::-webkit-scrollbar { width: 4px; }
-.modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-
-.player-card {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px; padding: 14px;
-  display: flex; align-items: center; gap: 12px;
-}
-.player-avatar { font-size: 32px; line-height: 1; flex-shrink: 0; }
-.player-info { flex: 1; min-width: 0; }
-.player-name { font-size: 16px; font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.player-stats-mini { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-.player-stat-badge {
-  background: rgba(255,255,255,0.07); border-radius: 20px;
-  padding: 2px 8px; font-size: 11px; font-weight: 800; color: var(--text-dim);
-}
-.player-stat-badge.highlight { color: var(--yellow); }
-
-.modal-empty {
-  text-align: center; color: var(--text-dim); font-weight: 800; font-size: 15px;
-  padding: 30px 0;
-}
-
-/* ========== SHARED ANIMATIONS ========== */
-@keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-@keyframes bounce-anim {
-  0% { transform: translateY(0); }
-  25% { transform: translateY(-24px) scale(1.1); }
-  50% { transform: translateY(-6px); }
-  75% { transform: translateY(-14px); }
-  100% { transform: translateY(0); }
-}
-@keyframes shake-anim {
-  0%,100% { transform: translateX(0); }
-  15% { transform: translateX(-8px) rotate(-2deg); }
-  35% { transform: translateX(8px) rotate(2deg); }
-  55% { transform: translateX(-6px) rotate(-1deg); }
-  75% { transform: translateX(6px) rotate(1deg); }
-}
-
-/* ============================================================
-   🔒 徹底隔離與修復：寶可夢關都圖鑑真實彈出式視窗定位 
-   ============================================================ */
-.dex-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 2000;
-  display: none; /* 💡 核心修正：沒打開前完全不渲染，拒絕留下殘影 */
-  justify-content: center;
-  align-items: center;
-}
-
-/* 當圖鑑打開時 (active) 才變成彈出層顯示 */
-.dex-modal.active {
-  display: flex !important;
-}
-
-.dex-modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-.dex-modal-content {
-  position: relative;
-  width: 92%;
-  max-width: 420px;
-  height: 75vh;
-  background: #16213e;
-  border-radius: 24px;
-  border: 2px solid rgba(255, 215, 0, 0.3);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 2001;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-  animation: modalUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.dex-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: #0f172a;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.06);
-}
-
-.dex-modal-title {
-  font-size: 18px;
+.login-logo h1 {
+  font-size: 26px;
   font-weight: 900;
   color: var(--yellow);
-  letter-spacing: 0.5px;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(255,215,0,0.4);
+  margin-top: 15px;
+  letter-spacing: 2px;
+}
+.login-logo p {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 5px;
 }
 
-.btn-close-dex {
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  color: #fff;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 14px;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+.login-card {
+  background: var(--surface2);
+  border-radius: var(--radius);
+  padding: 25px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 40px;
 }
-.btn-close-dex:hover {
-  background: #ef4444;
-  color: white;
-}
-
-@keyframes modalUp {
-  from { transform: translateY(40px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* ============================================================
-   ☁️ 雲端連線中遮罩基礎設定
-   ============================================================ */
-.loading-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(26, 26, 46, 0.96);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-}
-
-/* ============================================================
-   ⚡ 活力輸入框與全新炫彩「進入遊戲」按鈕
-   ============================================================ */
 .input-group {
-  width: 100%;
-  margin-top: 12px;
+  margin-bottom: 20px;
 }
 .input-group label {
   display: block;
-  text-align: left;
-  margin-bottom: 6px;
   font-size: 14px;
-  font-weight: 900;
-  color: #94A3B8;
-  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: bold;
 }
 .input-group input {
   width: 100%;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.6);
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.2);
   color: #fff;
   font-size: 16px;
-  font-family: inherit;
-  font-weight: 800;
-  outline: none;
-  transition: all 0.2s;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-  box-sizing: border-box;
-  text-align: center;
+  font-weight: bold;
+  transition: all 0.3s;
 }
 .input-group input:focus {
-  border-color: #FFD700;
-  background: rgba(15, 23, 42, 0.8);
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.25);
+  outline: none;
+  border-color: var(--blue);
+  background: rgba(0,0,0,0.3);
 }
 
 .btn-login {
   width: 100%;
-  padding: 15px 20px;
-  border: none;
-  border-radius: 16px;
-  font-family: inherit;
+  padding: 15px;
   font-size: 18px;
   font-weight: 900;
-  color: #1a1a2e;
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
-  background-size: 200% auto;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(255, 165, 0, 0.35), inset 0 -4px 0 rgba(0, 0, 0, 0.2);
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
-  transition: all 0.15s ease;
-  letter-spacing: 2px;
-  box-sizing: border-box;
-}
-
-.btn-login:hover {
-  background-position: right center;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 165, 0, 0.5), inset 0 -4px 0 rgba(0, 0, 0, 0.2);
-}
-
-.btn-login:active {
-  transform: translateY(2px);
-  box-shadow: 0 2px 10px rgba(255, 165, 0, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-}
-
-.btn-login:disabled {
-  background: #475569;
-  color: #94A3B8;
-  box-shadow: none;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* 返回大廳按鈕額外調整 */
-.btn-switch-user {
-  margin-top: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #94A3B8;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 12px;
-  width: 100%;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-sizing: border-box;
-  text-decoration: none;
-}
-.btn-switch-user:hover {
-  background: rgba(255, 255, 255, 0.12);
   color: #fff;
+  background: linear-gradient(135deg, var(--red), var(--dark-red));
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(227,53,13,0.4);
+  transition: all 0.2s;
+}
+.btn-login:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 /* ============================================================
-   主畫面按鈕升級美化（Pokémon Game Style）
+   2. 主畫面（已經清除多餘按鈕）
    ============================================================ */
-
-/* 1. 隨機更換伴侶按鈕 */
-#btn-change-partner, .btn-change-partner {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: linear-gradient(145deg, #ffffff, #e6e6e6);
-    color: #333333;
-    border: 2px solid #ccc;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: bold;
-    border-radius: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-bottom: 15px;
+#trainer-info-tag {
+  align-self: center;
+  background: rgba(0,0,0,0.3);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 15px;
 }
 
-#btn-change-partner:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.partner-display-zone {
+  text-align: center;
+  margin: 10px 0 20px;
+}
+#partner-label-text {
+  font-size: 14px;
+  color: var(--text-dim);
+  font-weight: bold;
+}
+.partner-card-glow {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #ffcb05;
+  border-radius: 24px;
+  display: inline-block;
+  padding: 15px 35px;
+  box-shadow: 0 0 25px rgba(255, 203, 5, 0.35);
+  margin-top: 10px;
+}
+#home-partner-sprite {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+}
+#partner-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffcb05;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  margin-top: 4px;
+}
+.hint-text {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 8px;
 }
 
-/* 2. 下方兩個核心操作按鈕的容器（排版更整齊） */
-.home-action-group {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 20px;
-    padding: 0 15px;
-    width: 100%;
-    box-sizing: border-box;
+/* 三方塊數據看板 */
+.stats-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.stat-box {
+  flex: 1;
+  background: var(--surface2);
+  border-radius: 14px;
+  padding: 12px 4px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.stat-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+.stat-value {
+  display: block;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
 }
 
-/* 3. 下方主按鈕通用樣式（開始對戰 & 查看圖鑑） */
-#btn-start, #btn-open-pokedex, .btn-home-main {
-    flex: 1;
-    max-width: 180px;
-    padding: 12px 10px;
-    font-size: 15px;
-    font-weight: bold;
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 6px 0px rgba(0, 0, 0, 0.2), 0 8px 15px rgba(0, 0, 0, 0.3);
-    cursor: pointer;
-    transition: all 0.1s ease;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
+/* ⚡ 唯一的特大黃金開始對戰按鈕 */
+.bottom-action-zone {
+  margin-bottom: 25px;
+}
+.btn-main-battle {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #1c2b59;
+  background: linear-gradient(to bottom, #ffe57f, #ffcb05);
+  border: 3px solid #3b4cca;
+  border-radius: 16px;
+  box-shadow: 0 6px 0px #2a3990, 0 10px 20px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.4);
+}
+.btn-main-battle:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0px #2a3990, 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 
-/* 開始心算對戰（皮卡丘活力黃） */
-#btn-start {
-    background: linear-gradient(to bottom, #ffe57f, #ffcb05);
-    color: #1c2b59;
-    border: 2px solid #3b4cca;
+/* 嵌入式首頁圖鑑區 */
+.pokedex-section {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius);
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.section-title {
+  font-size: 13px;
+  color: #ffe57f;
+  margin-bottom: 12px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.pokedex-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.pokedex-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.pokedex-grid::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
 }
 
-/* 查看寶可夢圖鑑（經典精靈球藍/紅） */
-#btn-open-pokedex {
-    background: linear-gradient(to bottom, #4fc3f7, #0288d1);
-    color: #ffffff;
-    border: 2px solid #01579b;
+.dex-card {
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 8px 4px;
+  text-align: center;
+  border: 1px solid transparent;
+  position: relative;
+  transition: all 0.2s;
+}
+.dex-card.caught {
+  background: rgba(15, 52, 96, 0.6);
+  border-color: rgba(255,255,255,0.1);
+  cursor: pointer;
+}
+.dex-card.caught:active {
+  transform: scale(0.93);
+}
+.dex-card.active-partner {
+  border-color: #ffcb05;
+  background: rgba(255, 203, 5, 0.15);
+  box-shadow: 0 0 10px rgba(255,203,5,0.3);
+}
+.dex-num {
+  font-size: 9px;
+  color: var(--text-dim);
+  font-family: monospace;
+}
+.dex-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  margin: 2px auto;
+  transition: transform 0.2s;
+}
+.dex-card.caught:hover .dex-img {
+  transform: scale(1.1);
+}
+.dex-name {
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-dim);
+}
+.dex-card.caught .dex-name {
+  color: #fff;
+}
+.dex-count {
+  position: absolute;
+  bottom: 2px; right: 4px;
+  background: var(--red);
+  color: #fff;
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  font-weight: bold;
 }
 
-/* 按鈕點擊下去的 3D 壓下效果 */
-#btn-start:active, #btn-open-pokedex:active {
-    transform: translateY(4px);
-    box-shadow: 0 2px 0px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.3);
+/* ============================================================
+   3. 對戰戰鬥畫面（💥 完美優合：橫向排列精靈）
+   ============================================================ */
+.battle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface2);
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.battle-stage-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--yellow);
+}
+.btn-quit {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: var(--text-dim);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 能量與血條 */
+.energy-container {
+  background: rgba(0,0,0,0.4);
+  border-radius: 10px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.energy-label { font-size: 12px; font-weight: bold; color: #ffeb3b; }
+.energy-bar-bg { flex: 1; height: 10px; background: #222; border-radius: 5px; overflow: hidden; }
+.energy-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ffeb3b, #ff9800); transition: width 0.3s; }
+.energy-pct { font-size: 11px; font-weight: bold; min-width: 28px; text-align: right; }
+
+/* 💡 核心修改：精靈對峙擂台改為「一橫行」排開，激省空間 */
+.battle-arena {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0,0,0,0.25);
+  border-radius: var(--radius);
+  padding: 10px 15px;
+  margin-bottom: 12px;
+  height: 100px;
+  position: relative;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.arena-vs {
+  font-size: 22px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--red);
+  text-shadow: 0 0 8px rgba(255,0,0,0.5);
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+.poke-fighter {
+  text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.poke-fighter img {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+}
+.poke-fighter-name {
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 3px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* 10題 ✓✗ 答題紀錄點點 */
+.score-chips {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.chip {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: transparent;
+}
+.chip.correct { background: var(--green); color: #fff; }
+.chip.wrong { background: var(--red); color: #fff; }
+
+/* 題目面板 */
+.question-panel {
+  background: var(--surface2);
+  border-radius: var(--radius);
+  padding: 15px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 12px;
+}
+.q-title { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; font-weight: bold; }
+.question-text { font-size: 38px; font-weight: 900; color: #fff; letter-spacing: 1px; margin-bottom: 4px; }
+.question-hint { font-size: 12px; color: #ffe57f; font-weight: bold; }
+
+/* 8秒倒數計時條 */
+.timer-container { margin-bottom: 15px; }
+.timer-bar-bg { height: 10px; background: rgba(0,0,0,0.4); border-radius: 5px; overflow: hidden; position: relative; }
+.timer-fill { width: 100%; height: 100%; background: var(--green); transition: width 0.05s linear; }
+.timer-fill.warning { background: var(--gold); }
+.timer-fill.danger { background: var(--red); }
+.timer-text-container { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 4px; font-weight: bold; }
+
+/* 💡 核心修改：答案按鈕排成「田字形」2x2 佈局 */
+.answers-grid,
+.options-container,
+.answers-container {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr);  /* 強制平分左同右兩列 */
+  gap: 10px;                             /* 按鈕之間的上下左右間距 */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-answer,
+.btn-option {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  height: 52px;                          /* 完美的手機點擊高度 */
+  padding: 0 10px;
+  font-size: 22px;                       /* 數字保持極度清晰巨大 */
+  font-weight: 900;
+  background: var(--surface);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  transition: all 0.1s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn-answer:active:not(:disabled),
+.btn-option:active:not(:disabled) { 
+  transform: scale(0.95); 
+}
+.btn-answer:disabled { opacity: 0.8; cursor: not-allowed; }
+.btn-answer.correct { background: linear-gradient(135deg, #22c55e, #15803d) !important; border-color: #fff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.btn-answer.wrong { background: linear-gradient(135deg, #ef4444, #b91c1c) !important; border-color: #fff !important; }
+
+/* ============================================================
+   4. 挑戰結果畫面
+   ============================================================ */
+.result-card {
+  background: var(--surface2);
+  border-radius: var(--radius);
+  padding: 25px 20px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-top: 20px;
+}
+.result-title { font-size: 26px; font-weight: 900; margin-bottom: 12px; }
+.result-title.win { color: var(--green); text-shadow: 0 0 10px rgba(34,197,94,0.3); }
+.result-title.lose { color: var(--text-dim); }
+
+.result-pokemon-display { margin: 15px 0; position: relative; }
+.result-pokemon-display img { width: 110px; height: 110px; object-fit: contain; }
+.result-pokemon-name { font-size: 18px; font-weight: 900; color: var(--yellow); margin-top: 4px; }
+
+.result-score-box { font-size: 15px; color: var(--text-dim); margin-bottom: 15px; font-weight: bold; }
+#result-score-num { font-size: 32px; font-weight: 900; color: #fff; }
+
+.result-chips-title { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; font-weight: bold; }
+.result-chips { display: flex; justify-content: center; gap: 5px; margin-bottom: 20px; }
+
+.result-catch-msg {
+  background: rgba(0,0,0,0.2);
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 25px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.result-menu { display: flex; flex-direction: column; gap: 12px; }
+.btn-menu-primary {
+  width: 100%; padding: 14px; font-size: 16px; font-weight: bold;
+  background: var(--blue); color: #fff; border: none; border-radius: 12px; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+.btn-menu-secondary {
+  width: 100%; padding: 13px; font-size: 14px; font-weight: bold;
+  background: transparent; color: var(--text-dim); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; cursor: pointer;
+}
+
+/* ============================================================
+   5. 全螢幕捕捉動畫覆蓋層
+   ============================================================ */
+.capture-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(10, 10, 25, 0.95);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.capture-overlay.active { display: flex; }
+.capture-text { font-size: 22px; font-weight: 900; color: #fff; text-align: center; margin-bottom: 5px; }
+.capture-text2 { font-size: 15px; color: var(--yellow); text-align: center; margin-bottom: 40px; font-weight: bold; height: 20px; }
+
+.capture-pokemon-sprite {
+  width: 130px; height: 130px; object-fit: contain;
+  margin-bottom: 35px;
+  transition: all 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045);
+}
+.capture-pokemon-sprite.sucked {
+  transform: scale(0) translateY(100px);
+  filter: brightness(2) sepia(1) hue-rotate(-50deg);
+  opacity: 0;
+}
+
+.pokeball-container { height: 100px; display: flex; align-items: center; justify-content: center; }
+.pokeball { width: 60px; height: 60px; }
+.pokeball.shake { animation: ballShake 0.6s ease-in-out 2; }
+@keyframes ballShake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-15deg) translateX(-5px); }
+  40% { transform: rotate(15deg) translateX(5px); }
+  60% { transform: rotate(-10deg) translateX(-3px); }
+  80% { transform: rotate(10deg) translateX(3px); }
+}
+
+.capture-flash {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: #fff; opacity: 0; pointer-events: none; z-index: 105;
+}
+.capture-flash.flash { animation: flashAnim 0.5s ease-out; }
+@keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ============================================================
+   6. 動畫效果與載入層
+   ============================================================ */
+.bounce { animation: spriteBounce 0.4s ease 1; }
+@keyframes spriteBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px) scaleY(1.05); }
+}
+.shake { animation: spriteShake 0.4s ease 1; }
+@keyframes spriteShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.loading-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg); z-index: 999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.spinner {
+  width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: var(--blue); border-radius: 50%; animation: spin 1s infinite linear;
+  margin-bottom: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.silhouette {
+  filter: brightness(0) contrast(1);
+  opacity: 0.25;
 }
