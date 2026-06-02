@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+TC:wght@700;900&display=swap');
+8@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+TC:wght@700;900&display=swap');
 
 :root {
   --red: #E3350D;
@@ -541,4 +541,83 @@ body {
 .btn-switch-user:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+
+/* ============================================================
+   主畫面按鈕升級美化（Pokémon Game Style）
+   ============================================================ */
+
+/* 1. 隨機更換伴侶按鈕 */
+#btn-change-partner, .btn-change-partner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(145deg, #ffffff, #e6e6e6);
+    color: #333333;
+    border: 2px solid #ccc;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 15px;
+}
+
+#btn-change-partner:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 2. 下方兩個核心操作按鈕的容器（排版更整齊） */
+.home-action-group {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 0 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 3. 下方主按鈕通用樣式（開始對戰 & 查看圖鑑） */
+#btn-start, #btn-open-pokedex, .btn-home-main {
+    flex: 1;
+    max-width: 180px;
+    padding: 12px 10px;
+    font-size: 15px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 6px 0px rgba(0, 0, 0, 0.2), 0 8px 15px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.1s ease;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* 開始心算對戰（皮卡丘活力黃） */
+#btn-start {
+    background: linear-gradient(to bottom, #ffe57f, #ffcb05);
+    color: #1c2b59;
+    border: 2px solid #3b4cca;
+}
+
+/* 查看寶可夢圖鑑（經典精靈球藍/紅） */
+#btn-open-pokedex {
+    background: linear-gradient(to bottom, #4fc3f7, #0288d1);
+    color: #ffffff;
+    border: 2px solid #01579b;
+}
+
+/* 按鈕點擊下去的 3D 壓下效果 */
+#btn-start:active, #btn-open-pokedex:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.3);
 }
