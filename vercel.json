@@ -2,8 +2,8 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/pokemon-math/api/:path*",
-      "destination": "/pokemon-math/api/:path*"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     },
     {
       "source": "/(.*)",
