@@ -1,0 +1,176 @@
+<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+<script>var vConsole = new window.VConsole();</script>
+
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>寶可夢數感訓練所</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="screen active" id="login-screen">
+  <div class="login-logo">
+    <div class="login-pokeball-icon">
+      <svg viewBox="0 0 100 100" width="70" height="70">
+        <path d="M5,50 A45,45 0 0,1 95,50" fill="#E3350D" stroke="#1a1a2e" stroke-width="4"/>
+        <path d="M5,50 A45,45 0 0,0 95,50" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="4"/>
+        <rect x="5" y="46" width="90" height="8" fill="#1a1a2e"/>
+        <circle cx="50" cy="50" r="14" fill="#1a1a2e"/>
+        <circle cx="50" cy="50" r="9" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="2"/>
+        <circle cx="50" cy="50" r="4" fill="white"/>
+      </svg>
+    </div>
+    <div class="login-title">寶可夢數感訓練所</div>
+    <div class="login-subtitle">2 位數進退位心算速擊</div>
+  </div>
+
+  <div class="login-box">
+    <div class="input-group">
+      <label for="trainer-name-input">訓練員名字</label>
+      <input type="text" id="trainer-name-input" placeholder="請輸入名字 (例如: Emma)" maxlength="10" autocomplete="off">
+    </div>
+
+    <div class="input-group" style="margin-top: 15px;">
+      <label for="trainer-password-input">記憶密碼</label>
+      <input type="password" id="trainer-password-input" placeholder="請輸入密碼 (新玩家自訂即可)" maxlength="20">
+    </div>
+
+    <button class="btn-login" id="btn-login" style="margin-top: 25px;">⚡ 進入遊戲 ⚡</button>
+    <button class="btn-switch-user" id="btn-switch-user" style="margin-top: 15px;">返回大廳</button>
+  </div>
+</div>
+
+<div class="screen" id="home-screen">
+  <div class="home-header">
+    <div class="trainer-info">
+      <div class="trainer-name" id="trainer-name-display">訓練員：玩家</div>
+    </div>
+  </div>
+
+  <div class="partner-panel">
+    <div class="partner-title">目前出戰伴侶</div>
+    <div class="partner-sprite-wrap">
+      <img class="partner-sprite" id="home-partner-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="伴侶寶可夢">
+    </div>
+    <button class="btn-action" id="btn-change-partner">🔄 隨機更換伴侶</button>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">解鎖圖鑑</div>
+      <div class="stat-value" id="val-pokedex">0 / 151</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">總對戰數</div>
+      <div class="stat-value" id="val-battles">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">平均準確率</div>
+      <div class="stat-value" id="val-accuracy">0%</div>
+    </div>
+  </div>
+
+  <div class="home-menu">
+    <button class="btn-menu-primary" id="btn-start">⚡ 開始心算對戰 (5秒擊破)</button>
+    <button class="btn-menu-secondary" id="btn-open-pokedex">📖 查看寶可夢圖鑑</button>
+  </div>
+</div>
+
+<div class="screen" id="battle-screen">
+  <div class="battle-header">
+    <div class="battle-timer">⏱️ <span id="battle-time">5.0</span>s</div>
+    <div class="battle-score-wrap">SCORE: <span id="battle-score">0</span></div>
+  </div>
+
+  <div class="timer-bar">
+    <div class="timer-fill" id="timer-fill"></div>
+  </div>
+
+  <div class="battle-arena">
+    <div class="enemy-platform">
+      <img class="enemy-sprite" id="enemy-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="野生寶可夢">
+    </div>
+    <div class="question-box">
+      <div class="question-text" id="question-text">45 + 38 = ?</div>
+    </div>
+  </div>
+
+  <div class="answers-grid">
+    <button class="btn-ans" data-idx="0">-</button>
+    <button class="btn-ans" data-idx="1">-</button>
+    <button class="btn-ans" data-idx="2">-</button>
+    <button class="btn-ans" data-idx="3">-</button>
+  </div>
+
+  <div class="battle-footer">
+    <button class="btn-quit" id="btn-quit">🏳️ 逃跑 (結束對戰)</button>
+  </div>
+</div>
+
+<div class="screen" id="result-screen">
+  <div class="result-box">
+    <div class="result-title">對戰結束</div>
+    <div class="result-score-label">獲得總分</div>
+    <div class="result-score" id="res-score">0</div>
+
+    <div class="result-details">
+      <div class="res-detail-item">
+        <span>答對題數</span>
+        <span id="res-details-count">0 / 0</span>
+      </div>
+      <div class="res-detail-item">
+        <span>本次準確率</span>
+        <span id="res-details-acc">0%</span>
+      </div>
+    </div>
+
+    <div class="result-menu">
+      <button class="btn-menu-primary" id="btn-retry">🔄 再戰一場</button>
+      <button class="btn-menu-secondary" id="btn-home">🏠 回主畫面</button>
+    </div>
+  </div>
+</div>
+
+<div class="dex-modal" id="dex-modal">
+  <div class="dex-modal-overlay" id="dex-modal-overlay"></div>
+  <div class="dex-modal-content">
+    <div class="dex-modal-header">
+      <div class="dex-modal-title">寶可夢關都圖鑑</div>
+      <button class="btn-close-dex" id="btn-close-dex">✕</button>
+    </div>
+    <div class="pokedex-grid" id="pokedex-grid">
+      </div>
+  </div>
+</div>
+
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-text" id="capture-text">精靈球捕捉充能完畢！</div>
+  <img class="capture-pokemon-sprite" id="capture-sprite" src="" alt="">
+  <div class="pokeball-container">
+    <div class="pokeball" id="pokeball">
+      <svg viewBox="0 0 100 100">
+        <path d="M5,50 A45,45 0 0,1 95,50" fill="#E3350D" stroke="#1a1a2e" stroke-width="4"/>
+        <path d="M5,50 A45,45 0 0,0 95,50" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="4"/>
+        <rect x="5" y="46" width="90" height="8" fill="#1a1a2e"/>
+        <circle cx="50" cy="50" r="14" fill="#1a1a2e"/>
+        <circle cx="50" cy="50" r="9" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="2"/>
+        <circle cx="50" cy="50" r="4" fill="white"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <p>E家雲端連線中...</p>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
