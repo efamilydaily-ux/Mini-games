@@ -530,7 +530,7 @@ class UIManager {
       });
     }
 
-    this.battle.startTimer(8,
+    this.battle.startTimer(7,
       (pct, sec) => {
         const fill = document.getElementById('timer-fill');
         const timeTxt = document.getElementById('timer-sec') || document.getElementById('battle-time');
