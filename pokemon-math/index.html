@@ -13,7 +13,7 @@
 <div class="screen active" id="login-screen">
   <div class="login-logo">
     <div class="login-pokeball-icon">
-      <svg viewBox=\"0 0 100 100\" width=\"70\" height=\"70\">
+      <svg viewBox="0 0 100 100" width="70" height="70">
         <path d="M5,50 A45,45 0 0,1 95,50" fill="#E3350D" stroke="#1a1a2e" stroke-width="4"/>
         <path d="M5,50 A45,45 0 0,0 95,50" fill="#F0F4FF" stroke="#1a1a2e" stroke-width="4"/>
         <rect x="5" y="46" width="90" height="8" fill="#1a1a2e"/>
@@ -169,6 +169,25 @@
 <div class="loading-overlay" id="loading-overlay">
   <div class="spinner"></div>
   <p style="font-weight: bold; font-size: 14px; color: var(--text-dim);">網頁載入中...</p>
+</div>
+
+<!-- 💡 新增：全圖鑑爆機 Congrats 終極滿分畫面 -->
+<div class="screen" id="master-victory-screen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #0f172a, #1e1b4b); z-index:9999; justify-content:center; align-items:center; flex-direction:column; padding:20px; text-align:center;">
+  <div style="font-size: 80px; animation: bounce 2s infinite;">🏆</div>
+  <h1 style="font-size: 32px; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.6); margin-top: 15px;">全圖鑑制霸！</h1>
+  <p style="font-size: 18px; color: #f0f4ff; margin: 15px 0 30px; font-weight: bold; line-height: 1.6;">
+    🎉 Congrats! 你已成為「終極寶可夢數學大師」！<br>
+    你已經成功捕捉了全部 151 隻寶可夢！<br>
+    這是一個近乎不可能的奇蹟，太厲害了！
+  </p>
+  <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; border: 1px solid #ffd700; margin-bottom: 40px; box-shadow: 0 0 15px rgba(255,215,0,0.2);">
+    <!-- 夢幻官方圖案作為認證標誌 -->
+    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/151.png" style="width: 130px; height: 130px; filter: drop-shadow(0 0 10px rgba(236,72,153,0.5));" alt="夢幻">
+    <div style="color: #ffe57f; font-weight: 900; font-size: 18px; margin-top: 8px;">👑 榮譽大師認證</div>
+  </div>
+  <button id="btn-master-continue" style="width: 80%; max-width: 250px; padding: 15px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #ffd700, #ffa500); color: #1e1b4b; border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,215,0,0.4); cursor: pointer; transition: transform 0.2s;">
+    繼續遨遊寶可夢世界
+  </button>
 </div>
 
 <script src="app.js"></script>
