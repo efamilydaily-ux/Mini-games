@@ -645,6 +645,8 @@ class UIManager {
       }, 600);
     }
   }
+
+  _addSparkle(btnEl) {
     const sp = document.createElement('div');
     sp.className = 'sparkle-overlay';
     btnEl.appendChild(sp);
