@@ -205,9 +205,11 @@ body {
   margin-top: 10px;
 }
 #home-partner-sprite {
-  width: 110px;
-  height: 110px;
+  width: 140px;
+  height: 140px;
   object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 #partner-name {
   font-size: 18px;
@@ -332,10 +334,12 @@ body {
   font-family: monospace;
 }
 .dex-img {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
   margin: 2px auto;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
   transition: transform 0.2s;
 }
 .dex-card.caught:hover .dex-img {
@@ -416,7 +420,7 @@ body {
   border-radius: var(--radius);
   padding: 10px 15px;
   margin-bottom: 12px;
-  height: 100px;
+  height: 130px;
   position: relative;
   box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
   border: 1px solid rgba(255,255,255,0.05);
@@ -439,9 +443,11 @@ body {
   justify-content: center;
 }
 .poke-fighter img {
-  width: 68px;
-  height: 68px;
+  width: 90px;
+  height: 90px;
   object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 .poke-fighter-name {
   font-size: 11px;
@@ -550,7 +556,7 @@ body {
 .result-title.lose { color: var(--text-dim); }
 
 .result-pokemon-display { margin: 15px 0; position: relative; }
-.result-pokemon-display img { width: 110px; height: 110px; object-fit: contain; }
+.result-pokemon-display img { width: 150px; height: 150px; object-fit: contain; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
 .result-pokemon-name { font-size: 18px; font-weight: 900; color: var(--yellow); margin-top: 4px; }
 
 .result-score-box { font-size: 15px; color: var(--text-dim); margin-bottom: 15px; font-weight: bold; }
@@ -599,8 +605,10 @@ body {
 .capture-text2 { font-size: 15px; color: var(--yellow); text-align: center; margin-bottom: 40px; font-weight: bold; height: 20px; }
 
 .capture-pokemon-sprite {
-  width: 130px; height: 130px; object-fit: contain;
+  width: 180px; height: 180px; object-fit: contain;
   margin-bottom: 35px;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
   transition: all 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045);
 }
 .capture-pokemon-sprite.sucked {

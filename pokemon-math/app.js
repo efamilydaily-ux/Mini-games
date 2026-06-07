@@ -40,7 +40,7 @@ const ALL_POKEMONS = Object.keys(POKE_NAMES_MAP).map(idStr => {
 });
 
 function getSprite(id) {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 }
 
 // ============================================================
