@@ -14,7 +14,7 @@ const CFG = {
   API_SAVE:      '/api/save-score',
   TIMER_SEC:     3,
   REVIEW_AFTER:  [5, 10, 20],       // spaced repetition offsets
-  IMG:           'hamster-math/images/',
+  IMG:           '/hamster-math/images/',
   AUDIO:         'hamster-math/audio/',
 };
 
