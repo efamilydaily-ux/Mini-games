@@ -14,7 +14,7 @@ const CFG = {
   API_SAVE:      '/api/save-score',
   TIMER_SEC:     3,
   REVIEW_AFTER:  [5, 10, 20],       // spaced repetition offsets
-  IMG:           '/hamster-math/images/',
+  IMG:           'hamster-math/images/',
   AUDIO:         'hamster-math/audio/',
 };
 
@@ -84,6 +84,8 @@ const DIALOGS = [
 const CORRECT_COMMENTS = [
   '✅ 答對了！太厲害！','🎯 正確！繼續衝！','⚡ 閃電速度！','🌟 完美！','🔥 熱身中！','💪 答對加分！',
 ];
+
+document.addEventListener('DOMContentLoaded', () => {
 
 /* ════════════════════════════════════════════════════════
    2. STATE
@@ -646,3 +648,5 @@ window.addEventListener('beforeunload', e => {
    17. RESIZE — no-op: furniture uses pure CSS % so always stable
 ════════════════════════════════════════════════════════ */
 // No resize handler needed — all furniture sizing is in CSS %
+
+}); // end DOMContentLoaded
