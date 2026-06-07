@@ -229,3 +229,31 @@ body::after {
 .btn-enter-game.disabled {
   color: rgba(255, 255, 255, 0.2);
 }
+
+/* 伊布主題卡片 */
+.eevee-theme {
+  background: linear-gradient(135deg, rgba(22, 33, 62, 0.9), rgba(180, 120, 60, 0.08));
+}
+
+.eevee-theme:hover, .eevee-theme:active {
+  border-color: rgba(210, 160, 90, 0.45);
+  box-shadow: 0 12px 35px rgba(180, 120, 60, 0.18);
+}
+
+.eevee-theme .game-icon {
+  background: rgba(210, 160, 90, 0.12);
+  text-shadow: 0 0 10px rgba(210, 160, 90, 0.5);
+}
+
+.eevee-theme .game-name {
+  color: #d4a05a;
+}
+
+.eevee-theme .btn-enter-game {
+  color: #d4a05a;
+}
+
+/* NEW 標籤（綠色，區別於 HOT 嘅紅色）*/
+.new-badge {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+}
