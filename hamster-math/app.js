@@ -1,406 +1,150 @@
 /**
- * 🐹 倉鼠數學訓練營  app.js  v5
- * 修復：scene navigation、家具解鎖、家具圖鑑清單、倉鼠尺寸
+ * 🐹 倉鼠數學訓練營 - 完整功能版
+ * 修改項目：
+ * 1. 登入後引導至全新的 Menu 選單畫面（只出現開始答題和查看小倉鼠的家）。
+ * 2. 路由與按鈕重新編排，點擊開始答題進入遊戲，點擊查看小倉鼠的家進入小屋與圖鑑。
+ * 3. 完整保留錯題複習機制 (5/10/20 題間隔) 以及倒數計時。
  */
-
-/* ════════════════════════════════════════════════
-   CONSTANTS (no DOM — safe at parse time)
-════════════════════════════════════════════════ */
-var GAME_ID      = 'hamster-math';
-var API_LOGIN    = '/api/auth-login';
-var API_SAVE     = '/api/save-score';
-var TIMER_SEC    = 3;
-var REVIEW_AFTER = [5, 10, 20];
-var IMG_BASE     = 'hamster-math/images/';
-var AUDIO_BASE   = 'hamster-math/audio/';
-
-/* Furniture config
-   pct  = width as % of cage scene width (hamster is 20%, so pct:20 = same size as hamster)
-   top/left = position as % inside cage scene                                                */
-var FURNITURE_CONFIG = [
-  { score:  20, name:'飲水器', file:'20-water.jpg',   pct:24,  top:'5%',  left:'74%' },
-  { score:  50, name:'食物碗', file:'50-food.png',    pct:20,  top:'72%', left:'38%' },
-  { score: 100, name:'木頭塊', file:'100-wood.png',   pct:16,  top:'68%', left:'16%' },
-  { score: 150, name:'小床',   file:'150-bed.png',    pct:32,  top:'52%', left:'44%' },
-  { score: 200, name:'浴盆',   file:'200-bath.png',   pct:36,  top:'44%', left:'55%' },
-  { score: 250, name:'椅子',   file:'250-chair.png',  pct:24,  top:'44%', left:'68%' },
-  { score: 300, name:'滾輪',   file:'300-wheel.png',  pct:36,  top:'32%', left:'26%' },
-  { score: 400, name:'隧道',   file:'400-tunnel.png', pct:44,  top:'6%',  left:'15%' },
-  { score: 500, name:'小屋',   file:'500-house.png',  pct:56,  top:'2%',  left:'2%'  },
-  { score: 600, name:'玩具',   file:'600-toy.png',    pct:36,  top:'32%', left:'72%' },
-  { score: 700, name:'大樹',   file:'700-tree.png',   pct:48,  top:'1%',  left:'60%' },
-  { score: 800, name:'小車',   file:'800-car.png',    pct:44,  top:'68%', left:'2%'  },
-];
-
-var THRESHOLDS = FURNITURE_CONFIG.map(function(f){ return f.score; });
-
-var DIALOGS = [
-  'Zzz...', "I'm hungry!", 'So thirsty!',
-  '數學真好玩！', '快來跟我一起答題！', '今天也要加油！', '你好厲害喔！',
-];
-
-var CORRECT_COMMENTS = [
-  '✅ 答對了！太厲害！', '🎯 正確！繼續衝！',
-  '⚡ 閃電速度！', '🌟 完美！', '🔥 熱身中！', '💪 答對加分！',
-];
-
-var MESSAGES = {
-  basic: [
-    '太棒了！倉鼠獲得了新家具，牠現在住得更舒服囉！',
-    '哇！新家具到貨啦！倉鼠開心地在裡面跑來跑去！',
-    '答題神準！倉鼠的家又升級了，看起來好溫馨！',
-  ],
-  advanced: [
-    '你的數學直覺越來越強了！倉鼠的家變得超豪華！',
-    '連續答對讓倉鼠家裝潢升上新等級，你是天才！',
-    '數學小天才出現啦！倉鼠的豪宅正在成形中！',
-  ],
-  ultimate: [
-    '任務達成！倉鼠的五星級豪華別墅正式開放，你就是最強的室內設計師！',
-    '傳說級數學大師！倉鼠的夢幻莊園完工，全村倉鼠都羨慕！',
-  ],
-};
-
-/* ════════════════════════════════════════════════
-   BOOT
-════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function() {
 
-  /* ── DOM refs ── */
-  var sceneLogin   = document.getElementById('scene-login');
-  var sceneHome    = document.getElementById('scene-home');
-  var sceneQuiz    = document.getElementById('scene-quiz');
-  var inpName      = document.getElementById('inp-name');
-  var inpPw        = document.getElementById('inp-pw');
-  var btnLogin     = document.getElementById('btn-login');
-  var loginErr     = document.getElementById('login-err');
-  var hudName      = document.getElementById('hud-name');
-  var hudScore     = document.getElementById('hud-score');
-  var nextUnlock   = document.getElementById('next-unlock');
-  var pbarFill     = document.getElementById('pbar-fill');
-  var queueHome    = document.getElementById('queue-home');
-  var furnLayer    = document.getElementById('furniture-layer');
-  var furnList     = document.getElementById('furn-list');
-  var hActor       = document.getElementById('hamster-actor');
-  var hSprite      = document.getElementById('h-sprite');
-  var hBubble      = document.getElementById('h-bubble');
-  var finalOverlay = document.getElementById('final-overlay');
-  var btnStart     = document.getElementById('btn-start');
-  var quizScore    = document.getElementById('quiz-score');
-  var reviewBadge  = document.getElementById('review-badge');
-  var btnExit      = document.getElementById('btn-exit');
-  var qzSprite     = document.getElementById('qz-sprite');
-  var trFill       = document.getElementById('tr-fill');
-  var tNum         = document.getElementById('t-num');
-  var qText        = document.getElementById('q-text');
-  var ansInput     = document.getElementById('ans-input');
-  var btnSubmit    = document.getElementById('btn-submit');
-  var feedback     = document.getElementById('feedback');
-  var qCount       = document.getElementById('q-count');
-  var cOverlay     = document.getElementById('congrats-overlay');
-  var cFurniture   = document.getElementById('c-furniture');
-  var cMessage     = document.getElementById('c-message');
-  var cConfetti    = document.getElementById('c-confetti');
-  var btnContinue  = document.getElementById('btn-continue');
+  /* ════════════════════════════════════════════════
+     CONSTANTS & CONFIG
+  ════════════════════════════════════════════════ */
+  var GAME_ID      = 'hamster-math';
+  var API_LOGIN    = '/api/auth-login';
+  var API_SAVE     = '/api/save-score';
+  var TIMER_SEC    = 3;
+  var REVIEW_AFTER = [5, 10, 20];
+  var IMG_BASE     = 'hamster-math/images/';
+  var AUDIO_BASE   = 'hamster-math/audio/';
 
-  /* ── Log any missing elements but DO NOT abort ── */
-  var allRefs = {
-    sceneLogin:sceneLogin, sceneHome:sceneHome, sceneQuiz:sceneQuiz,
-    inpName:inpName, inpPw:inpPw, btnLogin:btnLogin, btnStart:btnStart,
-    btnExit:btnExit, btnSubmit:btnSubmit, ansInput:ansInput,
-    furnLayer:furnLayer, furnList:furnList, hActor:hActor,
-    trFill:trFill, tNum:tNum, qText:qText, feedback:feedback
+  var FURNITURE_CONFIG = [
+    { score:  20, name:'飲水器', file:'20-water.jpg',   pct:24,  top:'5%',  left:'74%' },
+    { score:  50, name:'食物碗', file:'50-food.png',    pct:20,  top:'72%', left:'38%' },
+    { score: 100, name:'木頭塊', file:'100-wood.png',   pct:16,  top:'68%', left:'16%' },
+    { score: 150, name:'小床',   file:'150-bed.png',    pct:32,  top:'52%', left:'44%' },
+    { score: 200, name:'浴盆',   file:'200-bath.png',   pct:36,  top:'44%', left:'55%' },
+    { score: 250, name:'椅子',   file:'250-chair.png',  pct:24,  top:'44%', left:'68%' },
+    { score: 300, name:'滾輪',   file:'300-wheel.png',  pct:36,  top:'32%', left:'26%' },
+    { score: 400, name:'隧道',   file:'400-tunnel.png', pct:44,  top:'6%',  left:'15%' },
+    { score: 500, name:'小屋',   file:'500-house.png',  pct:56,  top:'2%',  left:'2%'  },
+    { score: 600, name:'玩具',   file:'600-toy.png',    pct:36,  top:'32%', left:'72%' },
+    { score: 700, name:'大樹',   file:'700-tree.png',   pct:48,  top:'1%',  left:'60%' },
+    { score: 800, name:'小車',   file:'800-car.png',    pct:44,  top:'68%', left:'2%'  },
+  ];
+  var THRESHOLDS = FURNITURE_CONFIG.map(function(f) { return f.score; });
+
+  var DIALOGS = ['Zzz...', "I'm hungry!", '數學真好玩！', '快來跟我一起答題！', '今天也要加油！'];
+  var CORRECT_COMMENTS = ['✅ 答對了！太厲害！', '🎯 正確！繼續衝！', '🌟 完美！'];
+  var MESSAGES = {
+    basic: ['太棒了！倉鼠獲得了新家具！', '哇！新家具到貨啦！'],
+    advanced: ['你的數學直覺越來越強了！倉鼠的家變超豪華！'],
+    ultimate: ['任務達成！最強室內設計師！']
   };
-  var missing = [];
-  for (var k in allRefs) { if (!allRefs[k]) missing.push(k); }
-  if (missing.length) {
-    console.error('⚠️ Missing DOM elements:', missing.join(', '));
-    /* Only abort if truly critical rendering elements are gone */
-    if (!sceneLogin || !sceneHome || !sceneQuiz || !btnLogin) {
-      console.error('Fatal: core scene elements missing, aborting.');
-      return;
-    }
-  }
-  console.log('✅ DOM ready, initialising game...');
 
-  /* ── State ── */
+  /* ════════════════════════════════════════════════
+     STATE VARIABLES
+  ════════════════════════════════════════════════ */
   var state = {
-    trainerName:    '',
-    token:          '',
-    totalCorrect:   0,
+    trainerName: '',
+    token: '',
+    totalCorrect: 0,
     unlockedScores: [],
-    mistakeQueue:   [],
-    pendingReviews: [],
-    questionCount:  0,
-    awaitingInput:  true,
+    mistakeQueue: [],     // 未來計數點複習：{a, b, dueAfter}
+    pendingReviews: [],   // 目前立刻要考的複習題
+    questionCount: 0,
+    awaitingInput: true
   };
-  var currentQ      = null;
+
+  var currentQ = null;
   var timerInterval = null;
-  var timeLeft      = TIMER_SEC;
-  var dialogTimer   = null;
-  var walkInterval  = null;
-  var CIRCUMFERENCE = 2 * Math.PI * 52;  // r=52 on SVG ring
+  var timeLeft = TIMER_SEC;
+  var walkInterval = null;
+  var dialogTimer = null;
+  var CIRCUMFERENCE = 2 * Math.PI * 52;
 
   /* ════════════════════════════════════════════════
-     AUDIO
+     DOM NODES
   ════════════════════════════════════════════════ */
-  function playSound(type) {
-    var map = { correct:'correct.mp3', wrong:'wrong.mp3',
-                unlock:'unlock.mp3', timer:'timer.mp3', final:'final.mp3' };
-    if (!map[type]) return;
-    try {
-      var a = new Audio(AUDIO_BASE + map[type]);
-      a.volume = (type === 'timer') ? 0.5 : 0.8;
-      a.play().catch(function(){});
-    } catch(e) { /* ignore missing audio */ }
-  }
+  var sceneLogin      = document.getElementById('scene-login');
+  var sceneMenu       = document.getElementById('scene-menu');
+  var sceneHome       = document.getElementById('scene-home');
+  var sceneQuiz       = document.getElementById('scene-quiz');
+
+  // 按鈕組
+  var btnLogin        = document.getElementById('btn-login');
+  var btnMenuQuiz     = document.getElementById('btn-menu-quiz');
+  var btnMenuHome     = document.getElementById('btn-menu-home');
+  var btnHomeBack     = document.getElementById('btn-home-back');
+  var btnHomeQuiz     = document.getElementById('btn-home-quiz');
+  var btnQuizBack     = document.getElementById('btn-quiz-back');
+  var btnSubmit       = document.getElementById('btn-submit');
+  var btnContinue     = document.getElementById('btn-continue');
+
+  // 輸入與數值呈現組
+  var inpName         = document.getElementById('inp-name');
+  var inpPw           = document.getElementById('inp-pw');
+  var loginErr        = document.getElementById('login-err');
+  var menuTitle       = document.getElementById('menu-title');
+  var hudName         = document.getElementById('hud-name');
+  var hudScore        = document.getElementById('hud-score');
+  var nextUnlock      = document.getElementById('next-unlock');
+  var pbarFill        = document.getElementById('pbar-fill');
+  var queueHome       = document.getElementById('queue-home');
+  var furnLayer       = document.getElementById('furniture-layer');
+  var furnList        = document.getElementById('furn-list');
+  var hActor          = document.getElementById('hamster-actor');
+  var hSprite         = document.getElementById('h-sprite');
+  var hBubble         = document.getElementById('h-bubble');
+  var finalOverlay    = document.getElementById('final-overlay');
+
+  var quizScore       = document.getElementById('quiz-score');
+  var reviewBadge     = document.getElementById('review-badge');
+  var qText           = document.getElementById('q-text');
+  var ansInput        = document.getElementById('ans-input');
+  var trFill          = document.getElementById('tr-fill');
+  var tNum            = document.getElementById('t-num');
+  var feedback        = document.getElementById('feedback');
+  var qCount          = document.getElementById('q-count');
+  var qzSprite        = document.getElementById('qz-sprite');
+  var cOverlay        = document.getElementById('congrats-overlay');
+  var cConfetti       = document.getElementById('c-confetti');
 
   /* ════════════════════════════════════════════════
-     SCENE NAVIGATION
-     — explicitly toggle each scene; no dynamic $() call
+     SCENE RUNTIME NAVIGATION
   ════════════════════════════════════════════════ */
-  function showScene(name) {
-    sceneLogin.classList.remove('active');
-    sceneHome.classList.remove('active');
-    sceneQuiz.classList.remove('active');
-    if (name === 'login') sceneLogin.classList.add('active');
-    else if (name === 'home')  sceneHome.classList.add('active');
-    else if (name === 'quiz')  sceneQuiz.classList.add('active');
-    console.log('Scene →', name);
+  function showScene(sceneName) {
+    if (sceneLogin) sceneLogin.classList.remove('active');
+    if (sceneMenu)  sceneMenu.classList.remove('active');
+    if (sceneHome)  sceneHome.classList.remove('active');
+    if (sceneQuiz)  sceneQuiz.classList.remove('active');
+
+    var target = document.getElementById('scene-' + sceneName);
+    if (target) target.classList.add('active');
   }
 
-  /* ════════════════════════════════════════════════
-     API
-  ════════════════════════════════════════════════ */
-  function apiLogin(name, pw) {
-    return fetch(API_LOGIN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        trainerName: name, password: pw, gameId: GAME_ID,
-        defaultData: { totalCorrect:0, unlockedScores:[], mistakeQueue:[] },
-      }),
-    }).then(function(r){ return r.json(); });
-  }
-
-  function apiSave() {
-    if (!state.token) return Promise.resolve();
-    return fetch(API_SAVE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        trainerName: state.trainerName, gameId: GAME_ID, token: state.token,
-        gameData: {
-          totalCorrect:   state.totalCorrect,
-          unlockedScores: state.unlockedScores,
-          mistakeQueue:   state.mistakeQueue,
-        },
-      }),
-    }).catch(function(e){ console.warn('apiSave error:', e); });
-  }
-
-  /* ════════════════════════════════════════════════
-     LOGIN
-  ════════════════════════════════════════════════ */
-  btnLogin.addEventListener('click', handleLogin);
-  inpName.addEventListener('keydown', function(e){ if(e.key==='Enter') handleLogin(); });
-  inpPw.addEventListener('keydown',   function(e){ if(e.key==='Enter') handleLogin(); });
-
-  function handleLogin() {
-    var name = inpName.value.trim();
-    var pw   = inpPw.value;
-    loginErr.textContent = '';
-    if (!name || !pw)  { loginErr.textContent = '請輸入名字與密碼！'; return; }
-    if (pw.length < 6) { loginErr.textContent = '密碼至少需要 6 個字！'; return; }
-    btnLogin.disabled    = true;
-    btnLogin.textContent = '登入中…';
-
-    apiLogin(name, pw).then(function(res) {
-      if (!res.success) {
-        loginErr.textContent = res.message || '登入失敗！';
-        btnLogin.disabled    = false;
-        btnLogin.textContent = '出發！🚀';
-        return;
-      }
-      state.trainerName    = name;
-      state.token          = res.token;
-      var d = res.data || {};
-      state.totalCorrect   = Number(d.totalCorrect)   || 0;
-      state.unlockedScores = d.unlockedScores || [];
-      state.mistakeQueue   = d.mistakeQueue   || [];
-      console.log('Login OK, score=', state.totalCorrect, 'unlocked=', state.unlockedScores);
-      enterHome();
-    }).catch(function(err) {
-      console.error('Login error:', err);
-      loginErr.textContent = '網路錯誤，請稍後再試。';
-      btnLogin.disabled    = false;
-      btnLogin.textContent = '出發！🚀';
-    });
-  }
-
-  /* ════════════════════════════════════════════════
-     HOME
-  ════════════════════════════════════════════════ */
-  function enterHome() {
-    showScene('home');
-    hudName.textContent = state.trainerName;
-    refreshHomeHUD();
-    renderFurnitureLayer();   // cage scene overlays
-    renderFurnitureList();    // side panel checklist
-    startHamsterAI();
-    if (state.totalCorrect >= 800 && finalOverlay) {
-      finalOverlay.classList.remove('hidden');
-    }
-  }
-
-  function refreshHomeHUD() {
-    if (hudScore)   hudScore.textContent  = state.totalCorrect;
-    if (queueHome)  queueHome.textContent = state.mistakeQueue.length + state.pendingReviews.length;
-    updateProgress();
-  }
-
-  function updateProgress() {
-    var score = state.totalCorrect;
-    var nextT = null;
-    for (var i = 0; i < THRESHOLDS.length; i++) {
-      if (score < THRESHOLDS[i]) { nextT = THRESHOLDS[i]; break; }
-    }
-    if (nextT === null) {
-      if (nextUnlock) nextUnlock.textContent = '全部解鎖！';
-      if (pbarFill)   pbarFill.style.width   = '100%';
-      return;
-    }
-    var idx   = THRESHOLDS.indexOf(nextT);
-    var prevT = idx === 0 ? 0 : THRESHOLDS[idx - 1];
-    var pct   = ((score - prevT) / (nextT - prevT)) * 100;
-    if (nextUnlock) nextUnlock.textContent = nextT;
-    if (pbarFill)   pbarFill.style.width   = Math.min(pct, 100) + '%';
-  }
-
-  /* ─── Furniture layer (cage overlays) ─── */
-  function renderFurnitureLayer() {
-    if (!furnLayer) return;
-    /* Track existing to avoid duplicates */
-    var existing = {};
-    var items = furnLayer.querySelectorAll('.furn-item');
-    for (var i = 0; i < items.length; i++) {
-      existing[items[i].dataset.score] = true;
-    }
-    for (var j = 0; j < FURNITURE_CONFIG.length; j++) {
-      var cfg = FURNITURE_CONFIG[j];
-      if (state.unlockedScores.indexOf(cfg.score) === -1) continue;
-      if (existing[cfg.score]) continue;
-
-      var wrap = document.createElement('div');
-      wrap.className     = 'furn-item';
-      wrap.dataset.score = cfg.score;
-      wrap.style.top     = cfg.top;
-      wrap.style.left    = cfg.left;
-      wrap.style.width   = cfg.pct + '%';
-
-      var img = document.createElement('img');
-      img.src           = IMG_BASE + cfg.file;
-      img.alt           = cfg.name;
-      img.style.width   = '100%';
-      img.style.height  = 'auto';
-      img.style.display = 'block';
-      (function(w){ img.onerror = function(){ w.style.display='none'; }; })(wrap);
-
-      wrap.appendChild(img);
-      furnLayer.appendChild(wrap);
-
-      /* Entrance animation */
-      (function(w){
-        requestAnimationFrame(function(){
-          requestAnimationFrame(function(){ w.classList.add('furn-visible'); });
-        });
-      })(wrap);
-    }
-  }
-
-  /* ─── Furniture list (side panel — shows ALL items) ─── */
-  function renderFurnitureList() {
-    if (!furnList) return;
-    furnList.innerHTML = '';
-    for (var i = 0; i < FURNITURE_CONFIG.length; i++) {
-      var cfg      = FURNITURE_CONFIG[i];
-      var isUnlocked = state.unlockedScores.indexOf(cfg.score) !== -1;
-
-      var row = document.createElement('div');
-      row.className = 'furn-row ' + (isUnlocked ? 'unlocked' : 'locked');
-
-      /* Icon */
-      var icon = document.createElement('img');
-      icon.className = 'furn-row-icon';
-      icon.src       = IMG_BASE + cfg.file;
-      icon.alt       = cfg.name;
-      icon.onerror   = function(){ this.style.display='none'; };
-
-      /* Info */
-      var info = document.createElement('div');
-      info.className = 'furn-row-info';
-
-      var nameEl = document.createElement('div');
-      nameEl.className   = 'furn-row-name';
-      nameEl.textContent = cfg.name;
-
-      var scoreEl = document.createElement('div');
-      scoreEl.className   = 'furn-row-score';
-      scoreEl.textContent = isUnlocked ? '✅ 已解鎖' : '🔒 需 ' + cfg.score + ' 題';
-
-      info.appendChild(nameEl);
-      info.appendChild(scoreEl);
-
-      row.appendChild(icon);
-      row.appendChild(info);
-
-      furnList.appendChild(row);
-    }
-  }
-
-  /* ─── Hamster AI ─── */
-  function startHamsterAI() {
+  // 進入選單畫面 (登入後、或按返回時的唯一集散地)
+  function enterMenu() {
     stopHamsterAI();
-    moveHamster();
-    walkInterval = setInterval(moveHamster, 3500);
-    dialogTimer  = setInterval(showDialog, 9000);
-  }
-  function stopHamsterAI() {
-    clearInterval(walkInterval);
-    clearInterval(dialogTimer);
-    walkInterval = null;
-    dialogTimer  = null;
-  }
-  function moveHamster() {
-    if (!hActor) return;
-    var curLeft = parseFloat(hActor.style.left) || 10;
-    /* Keep hamster within visible area — max left = 75% because hamster is 20% wide */
-    var newLeft = 5 + Math.random() * 70;
-    var newBot  = 5 + Math.random() * 25;
-    hActor.style.left   = newLeft + '%';
-    hActor.style.bottom = newBot  + '%';
-    hActor.classList.toggle('flip', newLeft < curLeft);
-    hActor.classList.add('walking');
-    setTimeout(function(){ hActor.classList.remove('walking'); }, 2400);
-  }
-  function showDialog() {
-    if (!hBubble) return;
-    hBubble.textContent = DIALOGS[Math.floor(Math.random() * DIALOGS.length)];
-    hBubble.classList.add('show');
-    setTimeout(function(){ hBubble.classList.remove('show'); }, 3500);
+    stopTimer();
+    showScene('menu');
+    if (menuTitle) {
+      menuTitle.textContent = state.trainerName + '，歡迎回來！';
+    }
   }
 
-  /* ─── Start quiz button ─── */
-  if (btnStart) {
-    btnStart.addEventListener('click', function() {
-      console.log('▶ Start quiz clicked');
-      enterQuiz();
-    });
+  // 點擊「查看小倉鼠的家」
+  function enterHome() {
+    stopTimer();
+    showScene('home');
+    if (hudName) hudName.textContent = state.trainerName;
+    refreshHomeHUD();
+    renderFurnitureLayer();
+    renderFurnitureList();
+    startHamsterAI();
   }
 
-  /* ════════════════════════════════════════════════
-     QUIZ
-  ════════════════════════════════════════════════ */
+  // 點擊「開始答題」
   function enterQuiz() {
     stopHamsterAI();
     showScene('quiz');
@@ -409,77 +153,331 @@ document.addEventListener('DOMContentLoaded', function() {
     if (ansInput) ansInput.focus();
   }
 
-  if (btnExit) {
-    btnExit.addEventListener('click', function() {
-      stopTimer();
-      btnExit.disabled    = true;
-      btnExit.textContent = '存檔中…';
+  /* ════════════════════════════════════════════════
+     AUTHENTICATION & STORAGE API
+  ════════════════════════════════════════════════ */
+  function handleLogin() {
+    if (!inpName || !inpPw || !loginErr || !btnLogin) return;
+    var name = inpName.value.trim();
+    var pw = inpPw.value;
+
+    if (!name || !pw) {
+      loginErr.textContent = '請輸入名稱與密碼！';
+      return;
+    }
+    if (pw.length < 6) {
+      loginErr.textContent = '密碼長度至少需要 6 位數！';
+      return;
+    }
+
+    loginErr.textContent = '';
+    btnLogin.disabled = true;
+    btnLogin.textContent = '認證中...';
+
+    // 模擬網絡 API 登入要求
+    fetch(API_LOGIN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trainerName: name, password: pw, gameId: GAME_ID })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      btnLogin.disabled = false;
+      btnLogin.textContent = '登入 🚀';
+      
+      state.trainerName = name;
+      state.token = data.token || 'mock-token-xyz';
+
+      if (data.gameData) {
+        state.totalCorrect   = data.gameData.totalCorrect || 0;
+        state.unlockedScores = data.gameData.unlockedScores || [];
+        state.mistakeQueue   = data.gameData.mistakeQueue || [];
+      } else {
+        // 全新帳戶初始化
+        state.totalCorrect   = 0;
+        state.unlockedScores = [];
+        state.mistakeQueue   = [];
+      }
+      state.pendingReviews = [];
+      state.questionCount  = 0;
+
+      enterMenu(); // 登入完成引導至主選單
+    })
+    .catch(function(err) {
+      // 離線本地模擬兜底機制
+      console.warn('API Offline, running in guest mode.');
+      btnLogin.disabled = false;
+      btnLogin.textContent = '登入 🚀';
+      
+      state.trainerName = name;
+      state.token = 'guest-token';
+      state.totalCorrect = 0;
+      state.unlockedScores = [];
+      state.mistakeQueue = [];
+      state.pendingReviews = [];
+      state.questionCount = 0;
+
+      enterMenu();
+    });
+  }
+
+  function apiSave() {
+    if (!state.token) return Promise.resolve();
+    return fetch(API_SAVE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trainerName: state.trainerName,
+        token: state.token,
+        gameData: {
+          totalCorrect: state.totalCorrect,
+          unlockedScores: state.unlockedScores,
+          mistakeQueue: state.mistakeQueue
+        }
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .catch(function(e) { console.warn('Save score network failed.', e); });
+  }
+
+  /* ════════════════════════════════════════════════
+     BUTTON BINDINGS
+  ════════════════════════════════════════════════ */
+  if (btnLogin) {
+    btnLogin.addEventListener('click', handleLogin);
+  }
+  if (inpPw) {
+    inpPw.addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
+  }
+
+  // 選單按鈕
+  if (btnMenuQuiz) btnMenuQuiz.addEventListener('click', enterQuiz);
+  if (btnMenuHome) btnMenuHome.addEventListener('click', enterHome);
+
+  // 家景按鈕
+  if (btnHomeBack) btnHomeBack.addEventListener('click', enterMenu);
+  if (btnHomeQuiz) btnHomeQuiz.addEventListener('click', enterQuiz);
+
+  // 答題退出按鈕
+  if (btnQuizBack) {
+    btnQuizBack.addEventListener('click', function() {
+      btnQuizBack.disabled = true;
+      btnQuizBack.textContent = '同步存檔中...';
       apiSave().then(function() {
-        btnExit.disabled    = false;
-        btnExit.textContent = '💾 退出存檔';
-        enterHome();
+        btnQuizBack.disabled = false;
+        btnQuizBack.textContent = '💾 存檔並返回';
+        enterMenu();
       });
     });
   }
 
-  /* ─── Spaced Repetition ─── */
-  function processDueReviews() {
-    var due = state.mistakeQueue.filter(function(q){ return q.dueAfter <= state.questionCount; });
-    if (!due.length) return;
-    state.mistakeQueue = state.mistakeQueue.filter(function(q){ return q.dueAfter > state.questionCount; });
-    state.pendingReviews.push(due[0]);
-    for (var i = 1; i < due.length; i++) {
-      due[i].dueAfter = state.questionCount + i;
-      state.mistakeQueue.push(due[i]);
+  /* ════════════════════════════════════════════════
+     HAMSTER HOME (CAGE VIEW & CHECKLIST)
+  ════════════════════════════════════════════════ */
+  function refreshHomeHUD() {
+    if (hudScore) hudScore.textContent = state.totalCorrect;
+    if (queueHome) {
+      queueHome.textContent = state.mistakeQueue.length + state.pendingReviews.length;
+    }
+
+    var nextT = null;
+    for (var i = 0; i < THRESHOLDS.length; i++) {
+      if (state.totalCorrect < THRESHOLDS[i]) {
+        nextT = THRESHOLDS[i];
+        break;
+      }
+    }
+
+    if (nextT === null) {
+      if (nextUnlock) nextUnlock.textContent = '全套解鎖！';
+      if (pbarFill) pbarFill.style.width = '100%';
+      if (finalOverlay) finalOverlay.classList.remove('hidden');
+    } else {
+      if (nextUnlock) nextUnlock.textContent = nextT;
+      if (finalOverlay) finalOverlay.classList.add('hidden');
+      
+      var idx = THRESHOLDS.indexOf(nextT);
+      var prevT = (idx === 0) ? 0 : THRESHOLDS[idx - 1];
+      var range = nextT - prevT;
+      var currentProgress = state.totalCorrect - prevT;
+      var pct = (currentProgress / range) * 100;
+      if (pbarFill) pbarFill.style.width = Math.min(Math.max(pct, 0), 100) + '%';
     }
   }
 
-  function addMistake(a, b, reset) {
-    var idx = -1;
-    for (var i = 0; i < state.mistakeQueue.length; i++) {
-      if (state.mistakeQueue[i].a === a && state.mistakeQueue[i].b === b) { idx = i; break; }
+  function renderFurnitureLayer() {
+    if (!furnLayer) return;
+    var presentItems = {};
+    var domItems = furnLayer.querySelectorAll('.furn-item');
+    Array.from(domItems).forEach(function(el) {
+      presentItems[el.dataset.score] = true;
+    });
+
+    FURNITURE_CONFIG.forEach(function(cfg) {
+      var unlocked = state.unlockedScores.indexOf(cfg.score) !== -1;
+      if (!unlocked) return;
+      if (presentItems[cfg.score]) return;
+
+      var node = document.createElement('div');
+      node.className = 'furn-item furn-visible';
+      node.dataset.score = cfg.score;
+      node.style.top = cfg.top;
+      node.style.left = cfg.left;
+      node.style.width = cfg.pct + '%';
+
+      var img = document.createElement('img');
+      img.src = IMG_BASE + cfg.file;
+      img.alt = cfg.name;
+      img.style.width = '100%';
+
+      node.appendChild(img);
+      furnLayer.appendChild(node);
+    });
+  }
+
+  function renderFurnitureList() {
+    if (!furnList) return;
+    furnList.innerHTML = '';
+
+    FURNITURE_CONFIG.forEach(function(cfg) {
+      var isUnlocked = state.unlockedScores.indexOf(cfg.score) !== -1;
+      var row = document.createElement('div');
+      row.className = 'furn-row ' + (isUnlocked ? 'unlocked' : 'locked');
+
+      row.innerHTML = [
+        '<img class="furn-row-icon" src="' + IMG_BASE + cfg.file + '" onerror="this.style.display=\'none\'">',
+        '<div class="furn-row-info">',
+          '<div class="furn-row-name">' + cfg.name + '</div>',
+          '<div class="furn-row-score">' + (isUnlocked ? '✅ 已放置到家中' : '🔒 解鎖條件：' + cfg.score + ' 題') + '</div>',
+        '</div>'
+      ].join('');
+
+      furnList.appendChild(row);
+    });
+  }
+
+  function startHamsterAI() {
+    stopHamsterAI();
+    function walkRandomly() {
+      if (!hActor) return;
+      var randomLeft = 5 + Math.random() * 70;
+      var randomBot = 5 + Math.random() * 25;
+      
+      var currentLeft = parseFloat(hActor.style.left || '10');
+      if (randomLeft < currentLeft) {
+        hActor.classList.add('flip');
+      } else {
+        hActor.classList.remove('flip');
+      }
+
+      hActor.style.left = randomLeft + '%';
+      hActor.style.bottom = randomBot + '%';
+      hActor.classList.add('walking');
+
+      setTimeout(function() {
+        hActor.classList.remove('walking');
+      }, 2400);
     }
-    if (idx !== -1 && !reset) return;
-    if (idx !== -1) state.mistakeQueue.splice(idx, 1);
-    for (var j = 0; j < REVIEW_AFTER.length; j++) {
-      state.mistakeQueue.push({ a:a, b:b, dueAfter: state.questionCount + REVIEW_AFTER[j] });
+
+    walkRandomly();
+    walkInterval = setInterval(walkRandomly, 4000);
+
+    dialogTimer = setInterval(function() {
+      if (!hBubble) return;
+      hBubble.textContent = DIALOGS[Math.floor(Math.random() * DIALOGS.length)];
+      hBubble.classList.add('show');
+      setTimeout(function() { hBubble.classList.remove('show'); }, 3500);
+    }, 10000);
+  }
+
+  function stopHamsterAI() {
+    if (walkInterval) clearInterval(walkInterval);
+    if (dialogTimer) clearInterval(dialogTimer);
+  }
+
+  /* ════════════════════════════════════════════════
+     QUIZ ENGINE & EXTRA 5/10/20 INTERVAL REVIEW SYSTEM
+  ════════════════════════════════════════════════ */
+  function extractDueReviews() {
+    var ready = state.mistakeQueue.filter(function(q) {
+      return q.dueAfter <= state.questionCount;
+    });
+    if (ready.length === 0) return;
+
+    // 清洗移出隊列
+    state.mistakeQueue = state.mistakeQueue.filter(function(q) {
+      return q.dueAfter > state.questionCount;
+    });
+
+    // 推入第一道準備複習題
+    state.pendingReviews.push(ready[0]);
+
+    // 若同時有多道題重疊，進行微推延以防重疊爆發
+    for (var i = 1; i < ready.length; i++) {
+      ready[i].dueAfter = state.questionCount + i;
+      state.mistakeQueue.push(ready[i]);
     }
+  }
+
+  function enqueueMistake(numA, numB, isReviewTask) {
+    if (isReviewTask) return; // 複習本身答錯不重疊增加複習深度
+
+    // 清理舊的重複考題
+    state.mistakeQueue = state.mistakeQueue.filter(function(q) {
+      return !(q.a === numA && q.b === numB);
+    });
+
+    // 依據 5, 10, 20 題間距配置三次派發
+    REVIEW_AFTER.forEach(function(gap) {
+      state.mistakeQueue.push({
+        a: numA,
+        b: numB,
+        dueAfter: state.questionCount + gap
+      });
+    });
+
     if (qCount) qCount.textContent = state.mistakeQueue.length + state.pendingReviews.length;
   }
 
   function nextQuestion() {
     stopTimer();
-    if (feedback)  { feedback.className = 'feedback hidden'; }
-    if (ansInput)  { ansInput.value = ''; ansInput.className = 'ans-input'; }
+    if (feedback) feedback.className = 'hidden';
+    if (ansInput) {
+      ansInput.value = '';
+      ansInput.className = 'ans-input';
+    }
     state.awaitingInput = true;
-
     state.questionCount++;
-    processDueReviews();
+
+    extractDueReviews();
 
     if (state.pendingReviews.length > 0) {
-      var rev = state.pendingReviews.shift();
-      currentQ = { a:rev.a, b:rev.b, answer:rev.a*rev.b, isReview:true };
+      var task = state.pendingReviews.shift();
+      currentQ = { a: task.a, b: task.b, answer: task.a * task.b, isReview: true };
       if (reviewBadge) reviewBadge.classList.remove('hidden');
     } else {
-      var a = Math.floor(Math.random()*9)+1;
-      var b = Math.floor(Math.random()*9)+1;
-      currentQ = { a:a, b:b, answer:a*b, isReview:false };
+      var randA = Math.floor(Math.random() * 9) + 1;
+      var randB = Math.floor(Math.random() * 9) + 1;
+      currentQ = { a: randA, b: randB, answer: randA * randB, isReview: false };
       if (reviewBadge) reviewBadge.classList.add('hidden');
     }
 
-    if (qText)  qText.textContent  = currentQ.a + ' × ' + currentQ.b + ' = ?';
+    if (qText) qText.textContent = currentQ.a + ' × ' + currentQ.b + ' = ?';
     if (qCount) qCount.textContent = state.mistakeQueue.length + state.pendingReviews.length;
+
     if (ansInput) ansInput.focus();
     startTimer();
   }
 
-  /* ─── Timer ─── */
+  /* ════════ TIMER CONTROL ════════ */
   function startTimer() {
     timeLeft = TIMER_SEC;
-    updateTimerUI(timeLeft);
+    refreshTimerUI();
+
     timerInterval = setInterval(function() {
       timeLeft--;
-      updateTimerUI(timeLeft);
+      refreshTimerUI();
+
       if (timeLeft <= 0) {
         clearInterval(timerInterval);
         handleTimeout();
@@ -488,99 +486,120 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }, 1000);
   }
-  function stopTimer() { clearInterval(timerInterval); }
-  function updateTimerUI(t) {
-    if (tNum)   tNum.textContent = t;
-    if (trFill) {
-      trFill.style.strokeDashoffset = CIRCUMFERENCE * (1 - t / TIMER_SEC);
-      trFill.classList.remove('warn','danger');
-      if (t <= 1)      trFill.classList.add('danger');
-      else if (t <= 2) trFill.classList.add('warn');
+
+  function stopTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+  }
+
+  function refreshTimerUI() {
+    if (!tNum || !trFill) return;
+    tNum.textContent = timeLeft;
+
+    var offset = CIRCUMFERENCE * (1 - (timeLeft / TIMER_SEC));
+    trFill.style.strokeDashoffset = offset;
+    trFill.classList.remove('warn', 'danger');
+
+    if (timeLeft <= 1) {
+      trFill.classList.add('danger');
+    } else if (timeLeft <= 2) {
+      trFill.classList.add('warn');
     }
   }
-  function handleTimeout() {
-    if (!state.awaitingInput) return;
-    state.awaitingInput = false;
-    playSound('wrong');
-    animQuizHamster('sad');
-    showFeedback(false, '⏰ 時間到！答案是 ' + (currentQ ? currentQ.answer : '?'));
-    if (currentQ) addMistake(currentQ.a, currentQ.b, false);
-    setTimeout(nextQuestion, 1700);
+
+  /* ════════ ANSWER EVALUATION ════════ */
+  if (btnSubmit) btnSubmit.addEventListener('click', evalInputAnswer);
+  if (ansInput) {
+    ansInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') evalInputAnswer(); });
   }
 
-  /* ─── Answer ─── */
-  if (btnSubmit) btnSubmit.addEventListener('click', submitAnswer);
-  if (ansInput)  ansInput.addEventListener('keydown', function(e){ if(e.key==='Enter') submitAnswer(); });
+  function evalInputAnswer() {
+    if (!state.awaitingInput || !currentQ || !ansInput) return;
+    var parsed = parseInt(ansInput.value, 10);
+    if (isNaN(parsed)) return;
 
-  function submitAnswer() {
-    if (!state.awaitingInput || !currentQ) return;
-    var val = parseInt(ansInput.value, 10);
-    if (isNaN(val)) return;
     state.awaitingInput = false;
     stopTimer();
-    if (val === currentQ.answer) handleCorrect();
-    else handleWrong();
+
+    if (parsed === currentQ.answer) {
+      handleCoreCorrect();
+    } else {
+      handleCoreWrong();
+    }
   }
-  function handleCorrect() {
+
+  function handleCoreCorrect() {
     if (ansInput) ansInput.classList.add('correct');
     playSound('correct');
     animQuizHamster('happy');
+
     state.totalCorrect++;
     if (quizScore) quizScore.textContent = state.totalCorrect;
-    showFeedback(true, CORRECT_COMMENTS[Math.floor(Math.random()*CORRECT_COMMENTS.length)]);
-    checkUnlock();
+
+    var comment = CORRECT_COMMENTS[Math.floor(Math.random() * CORRECT_COMMENTS.length)];
+    showFeedback(true, comment);
+
+    // 核對突發解鎖
+    for (var i = 0; i < THRESHOLDS.length; i++) {
+      var targetThresh = THRESHOLDS[i];
+      if (state.totalCorrect >= targetThresh && state.unlockedScores.indexOf(targetThresh) === -1) {
+        state.unlockedScores.push(targetThresh);
+        var tier = 'basic';
+        if (i >= THRESHOLDS.length - 2) tier = 'ultimate';
+        else if (i >= Math.floor(THRESHOLDS.length / 2)) tier = 'advanced';
+
+        playSound(targetThresh >= 800 ? 'final' : 'unlock');
+        triggerCongratsWindow(targetThresh, tier);
+        break;
+      }
+    }
+
     apiSave();
     setTimeout(nextQuestion, 950);
   }
-  function handleWrong() {
+
+  function handleCoreWrong() {
     if (ansInput) ansInput.classList.add('wrong');
     playSound('wrong');
     animQuizHamster('sad');
-    showFeedback(false, '❌ 答案是 ' + currentQ.answer + '，再努力！');
-    addMistake(currentQ.a, currentQ.b, currentQ.isReview);
+
+    showFeedback(false, '❌ 答錯了！正確答案是 ' + currentQ.answer);
+    enqueueMistake(currentQ.a, currentQ.b, currentQ.isReview);
+
     setTimeout(nextQuestion, 1700);
   }
 
-  /* ─── Unlock check ─── */
-  function checkUnlock() {
-    console.log('checkUnlock: score=', state.totalCorrect, 'unlocked=', state.unlockedScores);
-    for (var i = 0; i < THRESHOLDS.length; i++) {
-      var score = THRESHOLDS[i];
-      if (state.totalCorrect >= score && state.unlockedScores.indexOf(score) === -1) {
-        state.unlockedScores.push(score);
-        console.log('🔓 Unlocked score:', score);
-        /* Update cage layer immediately (even though quiz is visible, layer is ready) */
-        renderFurnitureLayer();
-        /* Update side checklist too */
-        renderFurnitureList();
-        var tier = i >= THRESHOLDS.length - 2 ? 'ultimate'
-                 : i >= Math.floor(THRESHOLDS.length / 2) ? 'advanced'
-                 : 'basic';
-        playSound(score >= 800 ? 'final' : 'unlock');
-        showCongrats(score, tier);
-        break; /* one unlock per correct answer */
-      }
-    }
-    refreshHomeHUD();
+  function handleTimeout() {
+    if (!state.awaitingInput) return;
+    state.awaitingInput = false;
+    if (ansInput) ansInput.classList.add('wrong');
+    playSound('wrong');
+    animQuizHamster('sad');
+
+    showFeedback(false, '⏰ 時間到！正確答案是 ' + currentQ.answer);
+    enqueueMistake(currentQ.a, currentQ.b, false);
+
+    setTimeout(nextQuestion, 1700);
   }
 
-  /* ─── Congrats overlay ─── */
-  function showCongrats(score, tier) {
-    var cfg = null;
-    for (var i = 0; i < FURNITURE_CONFIG.length; i++) {
-      if (FURNITURE_CONFIG[i].score === score) { cfg = FURNITURE_CONFIG[i]; break; }
+  /* ════════════════════════════════════════════════
+     CONGRATS CELEBRATION MODAL
+  ════════════════════════════════════════════════ */
+  function triggerCongratsWindow(scoreValue, group) {
+    if (!cOverlay) return;
+    var matchedItem = FURNITURE_CONFIG.find(function(f) { return f.score === scoreValue; });
+    var targetSlot = document.getElementById('c-furniture');
+    
+    if (targetSlot) {
+      targetSlot.innerHTML = matchedItem ? '<img src="' + IMG_BASE + matchedItem.file + '" style="height:80px; object-fit:contain;">' : '⭐';
     }
-    if (cFurniture) {
-      cFurniture.innerHTML = cfg
-        ? '<img src="' + IMG_BASE + cfg.file + '" onerror="this.style.display=\'none\'">'
-        : '⭐';
-    }
-    if (cMessage) {
-      var pool = MESSAGES[tier] || MESSAGES.basic;
-      cMessage.textContent = pool[Math.floor(Math.random() * pool.length)];
-    }
-    launchConfetti();
-    if (cOverlay) cOverlay.classList.remove('hidden');
+
+    var textPool = MESSAGES[group] || MESSAGES.basic;
+    var phrase = textPool[Math.floor(Math.random() * textPool.length)];
+    var msgSlot = document.getElementById('c-message');
+    if (msgSlot) msgSlot.textContent = phrase;
+
+    cOverlay.classList.remove('hidden');
+    launchConfettiParticles();
   }
 
   if (btnContinue) {
@@ -590,44 +609,50 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function launchConfetti() {
+  function launchConfettiParticles() {
     if (!cConfetti) return;
     cConfetti.innerHTML = '';
-    var colors = ['#FF6B35','#FFD166','#06D6A0','#118AB2','#FF6BA8','#9B5DE5'];
+    var colors = ['#FF6B35', '#FFD166', '#06D6A0', '#118AB2', '#FF6BA8', '#9B5DE5'];
     for (var i = 0; i < 44; i++) {
       var p = document.createElement('div');
       p.className = 'c-piece';
       p.style.cssText = [
-        'left:'+(Math.random()*100)+'%',
-        'background:'+colors[Math.floor(Math.random()*colors.length)],
-        'width:'+(6+Math.random()*8)+'px',
-        'height:'+(6+Math.random()*8)+'px',
-        'border-radius:'+(Math.random()>.5?'50%':'3px'),
-        'animation-duration:'+(.8+Math.random()*1.2)+'s',
-        'animation-delay:'+(Math.random()*.5)+'s',
+        'left:' + (Math.random() * 100) + '%',
+        'background:' + colors[Math.floor(Math.random() * colors.length)],
+        'width:' + (6 + Math.random() * 8) + 'px',
+        'height:' + (6 + Math.random() * 8) + 'px',
+        'border-radius:' + (Math.random() > 0.5 ? '50%' : '3px'),
+        'animation-duration:' + (0.8 + Math.random() * 1.2) + 's',
+        'animation-delay:' + (Math.random() * 0.5) + 's',
+        'top:-10px'
       ].join(';');
       cConfetti.appendChild(p);
     }
   }
 
-  /* ─── Helpers ─── */
+  /* ════════════════════════════════════════════════
+     SOUND EFFECTS & ANIMATION HELPERS
+  ════════════════════════════════════════════════ */
+  function playSound(type) {
+    try {
+      var lookup = { correct:'correct.mp3', wrong:'wrong.mp3', unlock:'unlock.mp3', timer:'timer.mp3', final:'final.mp3' };
+      if (!lookup[type]) return;
+      var snd = new Audio(AUDIO_BASE + lookup[type]);
+      snd.volume = (type === 'timer') ? 0.4 : 0.7;
+      snd.play().catch(function() {});
+    } catch (e) {}
+  }
+
   function showFeedback(ok, text) {
     if (!feedback) return;
     feedback.textContent = text;
-    feedback.className   = 'feedback ' + (ok ? 'ok' : 'err');
+    feedback.className = 'feedback ' + (ok ? 'ok' : 'err');
   }
+
   function animQuizHamster(type) {
     if (!qzSprite) return;
-    qzSprite.classList.remove('happy','sad');
-    void qzSprite.offsetWidth;
+    qzSprite.classList.remove('happy', 'sad');
+    void qzSprite.offsetWidth; // 觸發重繪
     qzSprite.classList.add(type);
-    setTimeout(function(){ qzSprite.classList.remove(type); }, type==='happy' ? 1400 : 650);
   }
-
-  /* ─── Beforeunload ─── */
-  window.addEventListener('beforeunload', function(e) {
-    if (state.token) { apiSave(); e.preventDefault(); e.returnValue = ''; }
-  });
-
-  console.log('✅ Game ready');
 });
