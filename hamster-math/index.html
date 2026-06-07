@@ -1,1 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐹 倉鼠數學訓練營</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
 
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="screen-login" class="screen active">
+    <div class="login-bg-shapes">
+      <div class="shape s1"></div>
+      <div class="shape s2"></div>
+      <div class="shape s3"></div>
+    </div>
+    <div class="login-card">
+      <div class="login-hamster">🐹</div>
+      <h1 class="login-title">倉鼠數學訓練營</h1>
+      <p class="login-sub">練好數學，幫倉鼠佈置豪宅！</p>
+
+      <div class="input-group">
+        <label>訓練師名字</label>
+        <input type="text" id="input-name" placeholder="輸入你的名字" maxlength="20" />
+      </div>
+      <div class="input-group">
+        <label>密碼（至少6位）</label>
+        <input type="password" id="input-password" placeholder="輸入密碼" maxlength="30" />
+      </div>
+
+      <button id="btn-login" class="btn-primary">
+        <span>出發！</span> 🚀
+      </button>
+      <p id="login-error" class="error-msg"></p>
+    </div>
+  </div>
+
+  <!-- ===== GAME SCREEN ===== -->
+  <div id="screen-game" class="screen">
+
+    <!-- Top HUD -->
+    <header class="hud">
+      <div class="hud-left">
+        <span class="hud-trainer">🐹 <span id="hud-name">訓練師</span></span>
+      </div>
+      <div class="hud-center">
+        <div class="score-badge">
+          <span class="score-label">答對</span>
+          <span id="hud-score">0</span>
+          <span class="score-label">題</span>
+        </div>
+      </div>
+      <div class="hud-right">
+        <button id="btn-save" class="btn-save" title="手動存檔">💾 存檔</button>
+      </div>
+    </header>
+
+    <main class="game-main">
+
+      <!-- Left: Hamster House -->
+      <section class="house-section">
+        <h2 class="house-title">🏠 倉鼠的家</h2>
+        <div class="house-container">
+          <div class="house-roof">▲</div>
+          <div class="house-body">
+            <!-- Furniture slots -->
+            <div class="furniture-grid" id="furniture-grid">
+              <div class="furniture-slot" data-slot="0" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="1" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="2" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="3" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="4" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="5" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="6" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="7" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="8" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="9" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="10" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="11" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="12" title="尚未解鎖">🔒</div>
+              <div class="furniture-slot" data-slot="13" title="尚未解鎖">🔒</div>
+            </div>
+            <!-- Hamster character -->
+            <div class="hamster-char" id="hamster-char">
+              <div class="hamster-emoji">🐹</div>
+              <div class="hamster-bubble" id="hamster-bubble"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Next unlock progress -->
+        <div class="unlock-progress">
+          <div class="progress-label">
+            下個解鎖：<span id="next-unlock-score">10</span> 題
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Quiz Area -->
+      <section class="quiz-section">
+        <!-- Review badge -->
+        <div id="review-badge" class="review-badge hidden">🔄 複習模式</div>
+
+        <!-- Timer ring -->
+        <div class="timer-container">
+          <svg class="timer-ring" viewBox="0 0 120 120">
+            <circle class="ring-bg" cx="60" cy="60" r="52"/>
+            <circle class="ring-fill" id="ring-fill" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="timer-text" id="timer-text">3</div>
+        </div>
+
+        <!-- Question -->
+        <div class="question-box">
+          <div class="question-text" id="question-text">? × ? = ?</div>
+        </div>
+
+        <!-- Answer input -->
+        <div class="answer-area">
+          <input
+            type="number"
+            id="answer-input"
+            class="answer-input"
+            placeholder="答案"
+            min="0" max="999"
+            autocomplete="off"
+          />
+          <button id="btn-submit" class="btn-submit">✔</button>
+        </div>
+
+        <!-- Feedback -->
+        <div id="feedback" class="feedback hidden"></div>
+
+        <!-- Mistake queue info -->
+        <div class="queue-info">
+          <span>錯題隊列：</span>
+          <span id="queue-count" class="queue-badge">0</span>
+          <span>題待複習</span>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===== CONGRATS OVERLAY ===== -->
+  <div id="congrats-overlay" class="congrats-overlay hidden">
+    <div class="congrats-card">
+      <div class="congrats-confetti" id="confetti-container"></div>
+      <div class="congrats-title">🎉 Congrats! 🎉</div>
+      <div class="congrats-hamster">🐹</div>
+      <div class="congrats-furniture" id="congrats-furniture"></div>
+      <div class="congrats-message" id="congrats-message"></div>
+      <button id="btn-continue" class="btn-primary">繼續練習！</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
