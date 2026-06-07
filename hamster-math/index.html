@@ -1,6 +1,6 @@
-⁸<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
- <head>
+<head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>🐹 倉鼠數學訓練營</title>
@@ -9,9 +9,9 @@
 </head>
 <body>
 
-<!-- ╔══════════════════════════════════════╗
-     ║  SCENE 1 · LOGIN                     ║
-     ╚══════════════════════════════════════╝ -->
+<!-- ══════════════════════════════════════
+     SCENE 1 · LOGIN
+══════════════════════════════════════ -->
 <div id="scene-login" class="scene active">
   <div class="login-blobs">
     <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
@@ -33,20 +33,17 @@
   </div>
 </div>
 
-<!-- ╔══════════════════════════════════════╗
-     ║  SCENE 2 · HOME (籠子大場景)         ║
-     ╚══════════════════════════════════════╝ -->
+<!-- ══════════════════════════════════════
+     SCENE 2 · HOME
+══════════════════════════════════════ -->
 <div id="scene-home" class="scene">
 
-  <!-- HUD bar -->
   <header class="hud">
     <span class="hud-name">🐹 <span id="hud-name">訓練師</span></span>
-    <div class="hud-score-wrap">
-      <div class="score-pill">
-        <span class="spl">答對</span>
-        <span id="hud-score">0</span>
-        <span class="spl">題</span>
-      </div>
+    <div class="score-pill">
+      <span class="spl">答對</span>
+      <span id="hud-score">0</span>
+      <span class="spl">題</span>
     </div>
     <div class="hud-progress-wrap">
       <span class="hud-plabel">下個解鎖 <b id="next-unlock">20</b> 題</span>
@@ -54,23 +51,16 @@
     </div>
   </header>
 
-  <!-- Cage viewport -->
-  <div class="cage-viewport">
+  <div class="home-layout">
+
+    <!-- LEFT: Cage -->
     <div class="cage-scene" id="cage-scene">
-
-      <!-- Background image -->
-      <img id="cage-bg" class="cage-bg" src="images/cage.jpg" alt="cage"/>
-
-      <!-- Furniture layer (JS renders absolute-positioned items here) -->
+      <img id="cage-bg" class="cage-bg" src="hamster-math/images/cage.jpg" alt="cage"/>
       <div id="furniture-layer"></div>
-
-      <!-- Hamster character -->
       <div class="hamster-actor" id="hamster-actor">
         <div class="h-bubble" id="h-bubble"></div>
-        <img class="h-sprite" id="h-sprite" src="images/hamster.png" alt="hamster"/>
+        <img class="h-sprite" id="h-sprite" src="hamster-math/images/hamster.png" alt="hamster"/>
       </div>
-
-      <!-- 通關 overlay -->
       <div id="final-overlay" class="final-overlay hidden">
         <div class="final-inner">
           <div class="final-trophy">🏆</div>
@@ -80,24 +70,32 @@
       </div>
     </div>
 
-    <!-- Side panel -->
+    <!-- RIGHT: Side panel -->
     <div class="home-side">
-      <div class="side-info">
-        <div class="side-row">
+      <div class="side-stats">
+        <div class="stat-row">
           錯題複習：<span id="queue-home" class="q-badge">0</span> 題
         </div>
-        <div class="side-row muted">點開始進入答題！</div>
       </div>
+
+      <!-- Furniture checklist — ALL items shown, locked or unlocked -->
+      <div class="furn-list-wrap">
+        <div class="furn-list-title">🏡 家具圖鑑</div>
+        <div class="furn-list" id="furn-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
       <button id="btn-start" class="btn-start">✏️ 開始答題！</button>
     </div>
+
   </div>
 </div>
 
-<!-- ╔══════════════════════════════════════╗
-     ║  SCENE 3 · QUIZ                      ║
-     ╚══════════════════════════════════════╝ -->
+<!-- ══════════════════════════════════════
+     SCENE 3 · QUIZ
+══════════════════════════════════════ -->
 <div id="scene-quiz" class="scene">
-
   <header class="quiz-hud">
     <div class="score-pill">
       <span class="spl">答對</span>
@@ -109,13 +107,9 @@
   </header>
 
   <div class="quiz-body">
-
-    <!-- Hamster (quiz version, smaller) -->
     <div class="qz-hamster-wrap">
       <img id="qz-sprite" class="qz-sprite" src="hamster-math/images/hamster.png" alt="hamster"/>
     </div>
-
-    <!-- Timer SVG ring -->
     <div class="timer-ring-wrap">
       <svg class="t-ring" viewBox="0 0 120 120">
         <circle class="tr-bg"   cx="60" cy="60" r="52"/>
@@ -123,30 +117,22 @@
       </svg>
       <span class="t-num" id="t-num">3</span>
     </div>
-
-    <!-- Question -->
     <div class="q-box">
-      <div class="q-text" id="q-text">? × ? = ?</div>
+      <div class="q-text" id="q-text">準備好了嗎？</div>
     </div>
-
-    <!-- Answer -->
     <div class="ans-row">
       <input id="ans-input" class="ans-input" type="number"
              placeholder="答案" min="0" max="999" autocomplete="off"/>
       <button id="btn-submit" class="btn-submit">✔</button>
     </div>
-
-    <!-- Feedback -->
     <div id="feedback" class="feedback hidden"></div>
-
-    <!-- Queue -->
     <div class="queue-info">錯題隊列：<span id="q-count" class="q-badge">0</span> 題</div>
   </div>
 </div>
 
-<!-- ╔══════════════════════════════════════╗
-     ║  CONGRATS OVERLAY (portal)            ║
-     ╚══════════════════════════════════════╝ -->
+<!-- ══════════════════════════════════════
+     CONGRATS OVERLAY
+══════════════════════════════════════ -->
 <div id="congrats-overlay" class="c-overlay hidden">
   <div class="c-card">
     <div id="c-confetti" class="c-confetti"></div>
