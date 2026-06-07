@@ -220,8 +220,8 @@ html, body {
   color: #fff; padding: 2px 6px; border-radius: 6px;
 }
 .eevee-pick-sprite {
-  width: 72px; height: 72px; object-fit: contain;
-  image-rendering: pixelated;
+  width: 80px; height: 80px; object-fit: contain;
+  image-rendering: auto;
 }
 .eevee-pick-name {
   font-size: 13px; font-weight: 800; color: var(--brown); margin-top: 6px;
@@ -322,7 +322,7 @@ html, body {
 .eevee-sprite {
   width: 96px; height: 96px;
   object-fit: contain;
-  image-rendering: pixelated;
+  image-rendering: auto;
   filter: drop-shadow(0 4px 8px rgba(139,94,60,0.25));
   transition: filter 0.3s;
 }
@@ -658,8 +658,8 @@ html, body {
   margin-bottom: 28px;
 }
 .master-eevee-parade img {
-  width: 56px; height: 56px;
-  object-fit: contain; image-rendering: pixelated;
+  width: 64px; height: 64px;
+  object-fit: contain; image-rendering: auto;
   filter: drop-shadow(0 2px 8px rgba(255,215,0,0.4));
   animation: float-gentle 2.5s ease-in-out infinite;
 }

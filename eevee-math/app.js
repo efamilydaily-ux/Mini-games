@@ -298,7 +298,7 @@ class UIManager {
 
       const currentScore = this.session.data.scores[eevee.id] || 0;
       card.innerHTML = `
-        <img class="eevee-pick-sprite" src="${getSpritePixel(eevee.spriteId)}" alt="${eevee.name}" loading="lazy">
+        <img class="eevee-pick-sprite" src="${getSprite(eevee.spriteId)}" alt="${eevee.name}" loading="lazy">
         <div class="eevee-pick-name">${eevee.emoji} ${eevee.name}</div>
         <div class="eevee-pick-score-needed">${unlocked ? '✅ 已解鎖' : `目標：${eevee.needed} 分`}</div>
         ${!unlocked ? `<div class="eevee-pick-badge badge-${eevee.badge}">${currentScore} / ${eevee.needed}</div>` : ''}
@@ -353,7 +353,7 @@ class UIManager {
     const spriteEl = document.getElementById('eevee-sprite');
     const nameEl   = document.getElementById('eevee-name-tag');
     // 遊戲中央用像素圖（較小顯示效果佳）
-    if (spriteEl && eevee) spriteEl.src = getSpritePixel(eevee.spriteId);
+    if (spriteEl && eevee) spriteEl.src = getSprite(eevee.spriteId);
     if (nameEl && eevee)   nameEl.textContent = `${eevee.emoji} ${eevee.name}`;
   }
 
@@ -674,7 +674,7 @@ class UIManager {
       parade.innerHTML = '';
       EEVEE_EVOLUTIONS.forEach(e => {
         const img = document.createElement('img');
-        img.src = getSpritePixel(e.spriteId);
+        img.src = getSprite(e.spriteId);
         img.alt = e.name;
         parade.appendChild(img);
       });
