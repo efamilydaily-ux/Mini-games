@@ -470,6 +470,7 @@ export default function App() {
       )}
 
       {/* ── Save status ── */}
+      /* 
       {saveStatus && (
         <div className={`save-status ${saveStatus}`}>
           {saveStatus === 'saving' && '☁️ 儲存中…'}
@@ -477,6 +478,7 @@ export default function App() {
           {saveStatus === 'error' && '⚠️ 儲存失敗'}
         </div>
       )}
+      */
 
       {/* ── Congrats overlay ── */}
       {showCongrats && (
