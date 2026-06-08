@@ -6,7 +6,7 @@
  *  - GameClient.js  (API layer)
  *  - GameLogic.js   (pure game logic)
  *  - style.css      (global styles)
- *  - audio/correct.mp3 & audio/wrong.mp3
+ *  - audio/correct.wav & audio/wrong.wav
  *  - images/puzzle_0.jpg … puzzle_9.jpg  (1920×1080)
  *
  * Puzzle rendering:
@@ -289,9 +289,9 @@ export default function App() {
     setFeedback(correct ? 'correct' : 'wrong');
 
     if (correct) {
-      playSound('audio/correct.wav');
+      playSound('./audio/correct.wav');
     } else {
-      playSound('audio/wrong.wav');
+      playSound('./audio/wrong.wav');
     }
 
     // Animate newly unlocked cells
