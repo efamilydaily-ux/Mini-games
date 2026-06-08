@@ -289,7 +289,7 @@ export default function App() {
     setFeedback(correct ? 'correct' : 'wrong');
 
     if (correct) {
-      playSound('./audio/correct.wav');
+      playSound('https://mini-games-git-dev-efamilydaily.vercel.app/puzzle-math/audio/correct.wav');
     } else {
       playSound('./audio/wrong.wav');
     }
