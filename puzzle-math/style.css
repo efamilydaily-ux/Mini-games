@@ -436,7 +436,7 @@ body::before {
   font-family: var(--font-display);
   font-size: 1.6rem;
   padding: 0.7rem 1.8rem;
-  min-width: 320px;          /* 強制最小寬度，確保不會擠壓 */
+  min-width: 100px;          /* 強制最小寬度，確保不會擠壓 */
   white-space: nowrap;       /* 強制文字不換行 */
   border-radius: 999px;
   pointer-events: none;
