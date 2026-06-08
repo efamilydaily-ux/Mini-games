@@ -15,7 +15,11 @@
 </head>
 <body>
   <div id="root"></div>
-
+  
+  <!-- ===== 音效 ===== -->
+  <audio id="snd-correct" src="https://cdn.freesound.org/previews/341/341695_5858296-lq.mp3" preload="auto"></audio>
+  <audio id="snd-wrong"   src="https://cdn.freesound.org/previews/142/142608_1840739-lq.mp3" preload="auto"></audio>
+  
   <script type="module">
     import React, { useState, useEffect, useRef, useCallback }
       from 'https://esm.sh/react@18';
