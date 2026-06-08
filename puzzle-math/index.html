@@ -6,75 +6,463 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#04050f" />
-
   <title>乘法神速賽</title>
   <link rel="stylesheet" href="style.css" />
-
-  <!--
-    If you're using a bundler (Vite / CRA / Next.js), remove the CDN script tags
-    below and import React normally in App.js.
-
-    For a no-bundler quick start the ESM CDN is used here.
-  -->
 </head>
 <body>
   <div id="root"></div>
 
-  <!--
-    Project structure expected:
-    ├── index.html          ← this file
-    ├── style.css
-    ├── src/
-    │   ├── main.jsx        ← React entry (see snippet below)
-    │   ├── App.js
-    │   ├── GameClient.js
-    │   └── GameLogic.js
-    ├── audio/
-    │   ├── correct.mp3
-    │   └── wrong.mp3
-    └── images/
-        ├── puzzle_0.jpg    (1920×1080)
-        ├── puzzle_1.jpg
-        …
-        └── puzzle_9.jpg
+  <script type="module">
+    import React, { useState, useEffect, useRef, useCallback }
+      from 'https://esm.sh/react@18';
+    import { createRoot } from 'https://esm.sh/react-dom@18/client';
 
-    ──────────────────────────────────────────────
-    Recommended: Vite project setup
-    ──────────────────────────────────────────────
-    1. npm create vite@latest multiplication-blitz -- --template react
-    2. Copy GameClient.js, GameLogic.js, App.js into src/
-    3. Replace src/main.jsx with the snippet below
-    4. Replace src/index.css with style.css
-    5. npm install && npm run dev
+    // ─── Inline GameClient ────────────────────────────────────────
+    const GAME_ID = 'multiplication-blitz-v1';
+    class GameClient {
+      constructor(gameId = GAME_ID) {
+        this.gameId = gameId;
+        this.trainerName = null;
+        this.token = null;
+      }
+      async login(trainerName, password, defaultData) {
+        const res = await fetch('/api/auth-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trainerName, password, gameId: this.gameId, defaultData }),
+        });
+        const json = await res.json();
+        if (json.success) { this.trainerName = trainerName; this.token = json.token; }
+        return json;
+      }
+      async saveScore(gameData) {
+        if (!this.trainerName || !this.token) return { success: false, message: '尚未登入' };
+        const res = await fetch('/api/save-score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trainerName: this.trainerName, gameId: this.gameId, gameData, token: this.token }),
+        });
+        return res.json();
+      }
+      async getScore() {
+        if (!this.trainerName) return { success: false, data: null };
+        const p = new URLSearchParams({ trainerName: this.trainerName, gameId: this.gameId });
+        const res = await fetch(`/api/get-score?${p}`);
+        return res.json();
+      }
+      get isAuthenticated() { return !!(this.trainerName && this.token); }
+    }
+    const gameClient = new GameClient();
 
-    src/main.jsx:
-    ─────────────
-    import React from 'react';
-    import ReactDOM from 'react-dom/client';
-    import App from './App.js';
-    import './style.css';
+    // ─── Inline GameLogic ─────────────────────────────────────────
+    const GAME_CONFIG = {
+      DIGITS: [2,3,4,5,6,7,8,9],
+      POINTS_PER_20: 20,
+      CELLS_PER_PUZZLE: 12,
+      TOTAL_PUZZLES: 10,
+      CENTRE_INDEX: 5,
+      ERROR_REPLAY_AT: [5, 10, 20],
+    };
+    const UNLOCK_ORDER = [0,1,2,3,4,6,7,8,9,10,11,5];
 
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
+    function createDefaultGameData() {
+      return {
+        totalScore: 0, combo: 0, maxCombo: 0,
+        answeredCount: 0, correctCount: 0, wrongCount: 0,
+        puzzles: Array.from({ length: GAME_CONFIG.TOTAL_PUZZLES }, () => ({
+          unlockedIndices: [], completed: false,
+        })),
+        currentPuzzleIndex: 0,
+        errorTracker: {},
+      };
+    }
 
-    ──────────────────────────────────────────────
-    API routes (Next.js / Express)
-    ──────────────────────────────────────────────
-    Place the three backend files in your API directory:
-      pages/api/auth-login.js   ← auth-login.js
-      pages/api/save-score.js   ← save-score.js
-      pages/api/get-score.js    ← get-score.js
+    function getDueReplayQuestion(errorTracker, answeredCount) {
+      for (const key of Object.keys(errorTracker)) {
+        const entry = errorTracker[key];
+        if (!entry.replayAt || entry.replayAt.length === 0) continue;
+        const nextReplayAt = entry.replayAt[0];
+        if (answeredCount >= nextReplayAt && !entry.replayed.includes(nextReplayAt)) {
+          return { a: entry.a, b: entry.b, answer: entry.a * entry.b };
+        }
+      }
+      return null;
+    }
 
-    GameClient.js calls:
-      POST  /api/auth-login
-      POST  /api/save-score
-      GET   /api/get-score?trainerName=…&gameId=…
+    function generateQuestion(errorTracker = {}, answeredCount = 0) {
+      const due = getDueReplayQuestion(errorTracker, answeredCount);
+      if (due) return { ...due, isReplay: true };
+      const { DIGITS } = GAME_CONFIG;
+      const a = DIGITS[Math.floor(Math.random() * DIGITS.length)];
+      const b = DIGITS[Math.floor(Math.random() * DIGITS.length)];
+      return { a, b, answer: a * b, isReplay: false };
+    }
 
-    Set BASE_URL in GameClient.js if your API lives on a different origin.
-    ──────────────────────────────────────────────
-  -->
+    function calcPoints(combo) {
+      if (combo >= 6) return 3;
+      if (combo >= 3) return 2;
+      return 1;
+    }
+
+    function applyScoreToPuzzle(gameData) {
+      const newUnlocks = [];
+      const totalCellsEarned = Math.floor(gameData.totalScore / GAME_CONFIG.POINTS_PER_20);
+      let remaining = totalCellsEarned;
+      for (let pi = 0; pi < gameData.puzzles.length; pi++) {
+        const puzzle = gameData.puzzles[pi];
+        const cellsForThis = Math.min(remaining, GAME_CONFIG.CELLS_PER_PUZZLE);
+        const targetUnlocked = UNLOCK_ORDER.slice(0, cellsForThis);
+        const already = new Set(puzzle.unlockedIndices);
+        targetUnlocked.forEach(idx => {
+          if (!already.has(idx)) {
+            puzzle.unlockedIndices.push(idx);
+            if (pi === gameData.currentPuzzleIndex) newUnlocks.push(idx);
+          }
+        });
+        puzzle.unlockedIndices.sort((a, b) => UNLOCK_ORDER.indexOf(a) - UNLOCK_ORDER.indexOf(b));
+        puzzle.completed = puzzle.unlockedIndices.length >= GAME_CONFIG.CELLS_PER_PUZZLE;
+        remaining -= GAME_CONFIG.CELLS_PER_PUZZLE;
+        if (remaining <= 0) break;
+      }
+      if (gameData.puzzles[gameData.currentPuzzleIndex]?.completed &&
+          gameData.currentPuzzleIndex < GAME_CONFIG.TOTAL_PUZZLES - 1) {
+        gameData.currentPuzzleIndex += 1;
+      }
+      return newUnlocks;
+    }
+
+    function processAnswer(gameData, question, playerAnswer) {
+      const correct = playerAnswer === question.answer;
+      const next = JSON.parse(JSON.stringify(gameData));
+      const { a, b } = question;
+      const key = `${a}x${b}`;
+      next.answeredCount += 1;
+      let pointsEarned = 0;
+      let newUnlocks = [];
+      if (correct) {
+        next.combo += 1;
+        next.maxCombo = Math.max(next.maxCombo, next.combo);
+        next.correctCount += 1;
+        pointsEarned = calcPoints(next.combo - 1);
+        next.totalScore += pointsEarned;
+        if (question.isReplay && next.errorTracker[key]) {
+          const e = next.errorTracker[key];
+          const doneAt = e.replayAt.shift();
+          e.replayed.push(doneAt);
+        }
+        newUnlocks = applyScoreToPuzzle(next);
+      } else {
+        next.combo = 0;
+        next.wrongCount += 1;
+        if (!next.errorTracker[key]) {
+          next.errorTracker[key] = { a, b, replayAt: [...GAME_CONFIG.ERROR_REPLAY_AT], replayed: [] };
+        } else {
+          const e = next.errorTracker[key];
+          GAME_CONFIG.ERROR_REPLAY_AT.forEach(cp => {
+            if (!e.replayAt.includes(cp) && !e.replayed.includes(cp)) e.replayAt.push(cp);
+          });
+          e.replayAt.sort((x, y) => x - y);
+        }
+      }
+      return { gameData: next, correct, pointsEarned, newUnlocks };
+    }
+
+    function generateOptions(correctAnswer) {
+      const opts = new Set([correctAnswer]);
+      let attempts = 0;
+      while (opts.size < 4 && attempts < 100) {
+        attempts++;
+        const offset = Math.floor(Math.random() * 20) - 10;
+        const c = correctAnswer + offset;
+        if (c > 0 && c !== correctAnswer) opts.add(c);
+      }
+      return [...opts].sort(() => Math.random() - 0.5);
+    }
+
+    function getUnlockedSet(gameData, puzzleIndex) {
+      return new Set(gameData.puzzles[puzzleIndex]?.unlockedIndices ?? []);
+    }
+
+    function puzzleProgress(gameData) {
+      const p = gameData.puzzles[gameData.currentPuzzleIndex];
+      if (!p) return 0;
+      return Math.round((p.unlockedIndices.length / GAME_CONFIG.CELLS_PER_PUZZLE) * 100);
+    }
+
+    function scoreToNextCell(gameData) {
+      const earned = Math.floor(gameData.totalScore / GAME_CONFIG.POINTS_PER_20);
+      return (earned + 1) * GAME_CONFIG.POINTS_PER_20 - gameData.totalScore;
+    }
+
+    // ─── Audio ───────────────────────────────────────────────────
+    function playSound(src) {
+      try { const a = new Audio(src); a.volume = 0.6; a.play().catch(() => {}); } catch(_) {}
+    }
+
+    // ─── useCountdown ─────────────────────────────────────────────
+    function useCountdown(seconds, onExpire) {
+      const [remaining, setRemaining] = useState(seconds);
+      const timerRef = useRef(null);
+      const onExpireRef = useRef(onExpire);
+      useEffect(() => { onExpireRef.current = onExpire; }, [onExpire]);
+
+      const reset = useCallback((s = seconds) => {
+        clearInterval(timerRef.current);
+        setRemaining(s);
+        timerRef.current = setInterval(() => {
+          setRemaining(prev => {
+            if (prev <= 1) { clearInterval(timerRef.current); onExpireRef.current(); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+      }, [seconds]);
+
+      const stop = useCallback(() => clearInterval(timerRef.current), []);
+      useEffect(() => () => clearInterval(timerRef.current), []);
+      return { remaining, reset, stop };
+    }
+
+    // ─── PuzzleGrid ───────────────────────────────────────────────
+    function PuzzleGrid({ backgroundImage, unlockedSet, newlyUnlocked }) {
+      const COLS = 4, ROWS = 3;
+      return React.createElement('div', { className: 'puzzle-grid' },
+        Array.from({ length: COLS * ROWS }, (_, i) => {
+          const col = i % COLS, row = Math.floor(i / COLS);
+          const revealed = unlockedSet.has(i);
+          const flashing = newlyUnlocked.has(i);
+          const bpX = (col / (COLS - 1)) * 100;
+          const bpY = (row / (ROWS - 1)) * 100;
+          return React.createElement('div', {
+            key: i,
+            className: ['puzzle-cell', revealed ? 'revealed' : 'masked', flashing ? 'unlocking' : ''].filter(Boolean).join(' '),
+            style: {
+              backgroundImage: `url(${backgroundImage})`,
+              backgroundSize: `${COLS * 100}% ${ROWS * 100}%`,
+              backgroundPosition: `${bpX}% ${bpY}%`,
+            },
+          }, !revealed ? React.createElement('span', { className: 'mask-icon' }, '🔒') : null);
+        })
+      );
+    }
+
+    // ─── CongratsOverlay ──────────────────────────────────────────
+    function CongratsOverlay({ puzzleIndex, onNext, onViewPuzzle }) {
+      const isLast = puzzleIndex >= GAME_CONFIG.TOTAL_PUZZLES - 1;
+      return React.createElement('div', { className: 'congrats-overlay' },
+        React.createElement('div', { className: 'congrats-card' },
+          React.createElement('div', { className: 'congrats-emoji' }, '🎉'),
+          React.createElement('h2', null, '拼圖完成！'),
+          React.createElement('p', null, '第 ', React.createElement('strong', null, puzzleIndex + 1), ' 幅圖解鎖完畢，你太厲害了！'),
+          React.createElement('div', { className: 'congrats-actions' },
+            React.createElement('button', { className: 'btn-secondary', onClick: onViewPuzzle }, '欣賞拼圖'),
+            !isLast && React.createElement('button', { className: 'btn-primary', onClick: onNext }, '繼續挑戰 →'),
+            isLast && React.createElement('p', { className: 'all-done' }, '🏆 全部 10 幅拼圖已完成！你是乘法冠軍！'),
+          )
+        )
+      );
+    }
+
+    // ─── LoginScreen ──────────────────────────────────────────────
+    function LoginScreen({ onLogin }) {
+      const [name, setName] = useState('');
+      const [pass, setPass] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async () => {
+        if (!name.trim() || !pass.trim()) { setError('請輸入名字與密碼'); return; }
+        if (pass.length < 6) { setError('密碼至少需要 6 個字元'); return; }
+        setLoading(true); setError('');
+        const result = await gameClient.login(name.trim(), pass, createDefaultGameData());
+        setLoading(false);
+        if (result.success) onLogin(result.data || createDefaultGameData());
+        else setError(result.message || '登入失敗，請再試一次');
+      };
+
+      const e = React.createElement;
+      return e('div', { className: 'login-screen' },
+        e('div', { className: 'login-card' },
+          e('div', { className: 'login-logo' }, '✖'),
+          e('h1', { className: 'login-title' }, '乘法神速賽'),
+          e('p', { className: 'login-subtitle' }, '解鎖拼圖，挑戰極速乘法！'),
+          e('div', { className: 'field-group' },
+            e('label', null, '訓練師名字'),
+            e('input', { type: 'text', placeholder: '輸入你的名字…', value: name,
+              onChange: ev => setName(ev.target.value),
+              onKeyDown: ev => ev.key === 'Enter' && handleSubmit() })
+          ),
+          e('div', { className: 'field-group' },
+            e('label', null, '密碼（至少 6 字）'),
+            e('input', { type: 'password', placeholder: '設定或輸入密碼…', value: pass,
+              onChange: ev => setPass(ev.target.value),
+              onKeyDown: ev => ev.key === 'Enter' && handleSubmit() })
+          ),
+          error ? e('p', { className: 'login-error' }, error) : null,
+          e('button', { className: 'btn-primary', onClick: handleSubmit, disabled: loading },
+            loading ? '連線中…' : '開始遊戲 →')
+        )
+      );
+    }
+
+    // ─── App ──────────────────────────────────────────────────────
+    function App() {
+      const [loggedIn, setLoggedIn] = useState(false);
+      const [gameData, setGameData] = useState(null);
+      const [question, setQuestion] = useState(null);
+      const [options, setOptions] = useState([]);
+      const [feedback, setFeedback] = useState(null);
+      const [selectedOption, setSelectedOption] = useState(null);
+      const [locked, setLocked] = useState(false);
+      const [newlyUnlocked, setNewlyUnlocked] = useState(new Set());
+      const [showCongrats, setShowCongrats] = useState(false);
+      const [saveStatus, setSaveStatus] = useState('');
+      const gameDataRef = useRef(null);
+      const questionRef = useRef(null);
+      const lockedRef = useRef(false);
+
+      // Keep refs in sync
+      useEffect(() => { gameDataRef.current = gameData; }, [gameData]);
+      useEffect(() => { questionRef.current = question; }, [question]);
+      useEffect(() => { lockedRef.current = locked; }, [locked]);
+
+      const loadQuestion = useCallback(data => {
+        const q = generateQuestion(data.errorTracker, data.answeredCount);
+        setQuestion(q); setOptions(generateOptions(q.answer));
+        setFeedback(null); setSelectedOption(null); setLocked(false);
+      }, []);
+
+      const handleExpire = useCallback(() => {
+        if (lockedRef.current || !questionRef.current) return;
+        handleAnswer(-1);
+      }, []);
+
+      const { remaining, reset: resetTimer, stop: stopTimer } = useCountdown(3, handleExpire);
+
+      async function handleAnswer(playerAnswer) {
+        if (lockedRef.current || !questionRef.current || !gameDataRef.current) return;
+        setLocked(true); lockedRef.current = true;
+        stopTimer();
+        setSelectedOption(playerAnswer);
+
+        const { gameData: nextData, correct, newUnlocks } = processAnswer(
+          gameDataRef.current, questionRef.current, playerAnswer
+        );
+
+        setFeedback(correct ? 'correct' : 'wrong');
+        playSound(correct ? 'audio/correct.mp3' : 'audio/wrong.mp3');
+
+        if (newUnlocks.length > 0) {
+          setNewlyUnlocked(new Set(newUnlocks));
+          setTimeout(() => setNewlyUnlocked(new Set()), 1200);
+        }
+
+        const prevPuzzle = gameDataRef.current.puzzles[gameDataRef.current.currentPuzzleIndex];
+        setGameData(nextData);
+
+        setSaveStatus('saving');
+        const saveResult = await gameClient.saveScore(nextData);
+        setSaveStatus(saveResult.success ? 'saved' : 'error');
+        setTimeout(() => setSaveStatus(''), 2000);
+
+        const nowPuzzle = nextData.puzzles[nextData.currentPuzzleIndex];
+        // check if the puzzle we were on just got completed
+        const justCompleted = nextData.puzzles[gameDataRef.current.currentPuzzleIndex]?.completed
+          && !prevPuzzle?.completed;
+
+        if (justCompleted) { setShowCongrats(true); return; }
+
+        setTimeout(() => { loadQuestion(nextData); resetTimer(3); }, 800);
+      }
+
+      function handleLogin(data) { setGameData(data); setLoggedIn(true); }
+
+      useEffect(() => {
+        if (loggedIn && gameData) { loadQuestion(gameData); resetTimer(3); }
+      }, [loggedIn]);
+
+      function handleContinue() { setShowCongrats(false); loadQuestion(gameData); resetTimer(3); }
+
+      if (!loggedIn) return React.createElement(LoginScreen, { onLogin: handleLogin });
+      if (!gameData || !question) return React.createElement('div', { className: 'loading-screen' },
+        React.createElement('div', { className: 'spinner' }),
+        React.createElement('p', null, '載入中…')
+      );
+
+      const pidx = gameData.currentPuzzleIndex;
+      const unlockedSet = getUnlockedSet(gameData, pidx);
+      const progress = puzzleProgress(gameData);
+      const toNext = scoreToNextCell(gameData);
+      const combo = gameData.combo;
+      const comboLabel = combo >= 6 ? '🔥🔥🔥 MAX COMBO'
+        : combo >= 3 ? `🔥 COMBO x${combo}`
+        : combo > 0 ? `Combo x${combo}` : '';
+      const timerFraction = remaining / 3;
+      const timerColor = remaining <= 1 ? '#ef4444' : remaining <= 2 ? '#f59e0b' : '#22c55e';
+
+      const e = React.createElement;
+      return e('div', { className: 'game-screen' },
+        // HUD
+        e('header', { className: 'hud' },
+          e('div', { className: 'hud-score' },
+            e('span', { className: 'hud-label' }, '得分'),
+            e('span', { className: 'hud-value' }, gameData.totalScore)
+          ),
+          e('div', { className: 'hud-center' },
+            e('div', { className: 'timer-ring', style: { '--fraction': timerFraction, '--color': timerColor } },
+              e('span', { className: 'timer-number' }, remaining)
+            )
+          ),
+          e('div', { className: 'hud-puzzle' },
+            e('span', { className: 'hud-label' }, `拼圖 ${pidx + 1}/10`),
+            e('span', { className: 'hud-value' }, `${progress}%`)
+          )
+        ),
+        // Combo
+        comboLabel ? e('div', { className: `combo-banner${combo >= 6 ? ' max' : ''}` }, comboLabel) : null,
+        // Puzzle
+        e('section', { className: 'puzzle-section' },
+          e(PuzzleGrid, { backgroundImage: `images/puzzle_${pidx}.jpg`, unlockedSet, newlyUnlocked }),
+          e('p', { className: 'next-unlock-hint' }, `再 ${toNext} 分解鎖下一格`)
+        ),
+        // Question
+        e('section', { className: 'question-section' },
+          question.isReplay ? e('span', { className: 'replay-badge' }, '📋 複習題') : null,
+          e('div', { className: 'question-display' },
+            e('span', { className: 'operand' }, question.a),
+            e('span', { className: 'operator' }, '✕'),
+            e('span', { className: 'operand' }, question.b),
+            e('span', { className: 'operator' }, '='),
+            e('span', { className: 'answer-blank' }, '?')
+          )
+        ),
+        // Options
+        e('section', { className: 'options-grid' },
+          ...options.map(opt => {
+            let cls = 'option-btn';
+            if (selectedOption !== null) {
+              if (opt === question.answer) cls += ' correct';
+              else if (opt === selectedOption) cls += ' wrong';
+            }
+            return e('button', { key: opt, className: cls, onClick: () => handleAnswer(opt), disabled: locked }, opt);
+          })
+        ),
+        // Feedback
+        feedback ? e('div', { className: `feedback-flash ${feedback}` },
+          feedback === 'correct' ? '✓ 正確！' : '✗ 再加油！') : null,
+        // Save status
+        saveStatus ? e('div', { className: `save-status ${saveStatus}` },
+          saveStatus === 'saving' ? '☁️ 儲存中…' : saveStatus === 'saved' ? '✅ 已儲存' : '⚠️ 儲存失敗') : null,
+        // Congrats
+        showCongrats ? e(CongratsOverlay, {
+          puzzleIndex: pidx,
+          onNext: handleContinue,
+          onViewPuzzle: () => setShowCongrats(false)
+        }) : null
+      );
+    }
+
+    // ─── Mount ────────────────────────────────────────────────────
+    createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
 </body>
 </html>
