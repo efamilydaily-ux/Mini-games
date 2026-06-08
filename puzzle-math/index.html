@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#04050f" />
+
+  <title>乘法神速賽</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!--
+    If you're using a bundler (Vite / CRA / Next.js), remove the CDN script tags
+    below and import React normally in App.js.
+
+    For a no-bundler quick start the ESM CDN is used here.
+  -->
+</head>
+<body>
+  <div id="root"></div>
+
+  <!--
+    Project structure expected:
+    ├── index.html          ← this file
+    ├── style.css
+    ├── src/
+    │   ├── main.jsx        ← React entry (see snippet below)
+    │   ├── App.js
+    │   ├── GameClient.js
+    │   └── GameLogic.js
+    ├── audio/
+    │   ├── correct.mp3
+    │   └── wrong.mp3
+    └── images/
+        ├── puzzle_0.jpg    (1920×1080)
+        ├── puzzle_1.jpg
+        …
+        └── puzzle_9.jpg
+
+    ──────────────────────────────────────────────
+    Recommended: Vite project setup
+    ──────────────────────────────────────────────
+    1. npm create vite@latest multiplication-blitz -- --template react
+    2. Copy GameClient.js, GameLogic.js, App.js into src/
+    3. Replace src/main.jsx with the snippet below
+    4. Replace src/index.css with style.css
+    5. npm install && npm run dev
+
+    src/main.jsx:
+    ─────────────
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import App from './App.js';
+    import './style.css';
+
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+
+    ──────────────────────────────────────────────
+    API routes (Next.js / Express)
+    ──────────────────────────────────────────────
+    Place the three backend files in your API directory:
+      pages/api/auth-login.js   ← auth-login.js
+      pages/api/save-score.js   ← save-score.js
+      pages/api/get-score.js    ← get-score.js
+
+    GameClient.js calls:
+      POST  /api/auth-login
+      POST  /api/save-score
+      GET   /api/get-score?trainerName=…&gameId=…
+
+    Set BASE_URL in GameClient.js if your API lives on a different origin.
+    ──────────────────────────────────────────────
+  -->
+</body>
+</html>
