@@ -421,7 +421,7 @@
         comboLabel ? e('div', { className: `combo-banner${combo >= 6 ? ' max' : ''}` }, comboLabel) : null,
         // Puzzle
         e('section', { className: 'puzzle-section' },
-          e(PuzzleGrid, { backgroundImage: `images/puzzle_${pidx}.jpg`, unlockedSet, newlyUnlocked }),
+          e(PuzzleGrid, { backgroundImage: `images/puzzle_${pidx}.png`, unlockedSet, newlyUnlocked }),
           e('p', { className: 'next-unlock-hint' }, `再 ${toNext} 分解鎖下一格`)
         ),
         // Question
