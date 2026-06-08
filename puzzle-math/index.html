@@ -450,8 +450,8 @@
         feedback ? e('div', { className: `feedback-flash ${feedback}` },
           feedback === 'correct' ? '✓ 正確！' : '✗ 再加油！') : null,
         // Save status
-        saveStatus ? e('div', { className: `save-status ${saveStatus}` },
-          saveStatus === 'saving' ? '☁️ 儲存中…' : saveStatus === 'saved' ? '✅ 已儲存' : '⚠️ 儲存失敗') : null,
+        // saveStatus ? e('div', { className: `save-status ${saveStatus}` },
+        // saveStatus === 'saving' ? '☁️ 儲存中…' : saveStatus === 'saved' ? '✅ 已儲存' : '⚠️ 儲存失敗') : null,
         // Congrats
         showCongrats ? e(CongratsOverlay, {
           puzzleIndex: pidx,
