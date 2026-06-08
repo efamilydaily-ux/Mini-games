@@ -289,9 +289,9 @@ export default function App() {
     setFeedback(correct ? 'correct' : 'wrong');
 
     if (correct) {
-      playSound('audio/correct.wav');
+      playSound('audio/correct.mp3');
     } else {
-      playSound('audio/wrong.wav');
+      playSound('audio/wrong.mp3');
     }
 
     // Animate newly unlocked cells
