@@ -314,7 +314,7 @@ body::before {
 
 /* MASKED: dark overlay with lock icon */
 .puzzle-cell.masked {
-  filter: brightness(0.15) saturate(0);
+  filter: brightness(0) saturate(0);
   display: flex;
   align-items: center;
   justify-content: center;
