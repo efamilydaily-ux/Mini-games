@@ -1,7 +1,3 @@
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
-
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -12,20 +8,24 @@
   <meta name="theme-color" content="#04050f" />
   <title>乘法神速賽</title>
   <link rel="stylesheet" href="style.css" />
+
+  <!-- ══ 音效預載（4 種）══════════════════════════════════════════ -->
+  <audio id="snd-correct" src="https://cdn.freesound.org/previews/341/341695_5858296-lq.mp3" preload="auto"></audio>
+  <audio id="snd-wrong"   src="https://cdn.freesound.org/previews/142/142608_1840739-lq.mp3" preload="auto"></audio>
+  <audio id="snd-unlock"  src="https://cdn.freesound.org/previews/562/562446_1566888-lq.mp3" preload="auto"></audio>
+  <audio id="snd-complete" src="https://cdn.freesound.org/previews/572/572990_11867169-lq.mp3" preload="auto"></audio>
 </head>
 <body>
   <div id="root"></div>
-  
-  <!-- ===== 音效 ===== -->
-  <audio id="snd-correct" src="https://cdn.freesound.org/previews/341/341695_5858296-lq.mp3" preload="auto"></audio>
-  <audio id="snd-wrong"   src="https://cdn.freesound.org/previews/142/142608_1840739-lq.mp3" preload="auto"></audio>
-  
+
   <script type="module">
     import React, { useState, useEffect, useRef, useCallback }
       from 'https://esm.sh/react@18';
     import { createRoot } from 'https://esm.sh/react-dom@18/client';
 
-    // ─── Inline GameClient ────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    //  GameClient (inline)
+    // ════════════════════════════════════════════════════════════
     const GAME_ID = 'multiplication-blitz-v1';
     class GameClient {
       constructor(gameId = GAME_ID) {
@@ -48,21 +48,26 @@
         const res = await fetch('/api/save-score', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trainerName: this.trainerName, gameId: this.gameId, gameData, token: this.token }),
+          body: JSON.stringify({
+            trainerName: this.trainerName,
+            gameId: this.gameId,
+            gameData,
+            token: this.token,
+          }),
         });
         return res.json();
       }
       async getScore() {
         if (!this.trainerName) return { success: false, data: null };
         const p = new URLSearchParams({ trainerName: this.trainerName, gameId: this.gameId });
-        const res = await fetch(`/api/get-score?${p}`);
-        return res.json();
+        return (await fetch(`/api/get-score?${p}`)).json();
       }
-      get isAuthenticated() { return !!(this.trainerName && this.token); }
     }
     const gameClient = new GameClient();
 
-    // ─── Inline GameLogic ─────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    //  GameLogic (inline)
+    // ════════════════════════════════════════════════════════════
     const GAME_CONFIG = {
       DIGITS: [2,3,4,5,6,7,8,9],
       POINTS_PER_20: 20,
@@ -85,12 +90,15 @@
       };
     }
 
+    // ── 錯題複習：只在非剛答錯後才觸發，避免連續重複 ─────────────
     function getDueReplayQuestion(errorTracker, answeredCount) {
       for (const key of Object.keys(errorTracker)) {
         const entry = errorTracker[key];
         if (!entry.replayAt || entry.replayAt.length === 0) continue;
-        const nextReplayAt = entry.replayAt[0];
-        if (answeredCount >= nextReplayAt && !entry.replayed.includes(nextReplayAt)) {
+        const nextAt = entry.replayAt[0];
+        // strict: answeredCount must EQUAL the checkpoint (not >=)
+        // to ensure the question only appears once per checkpoint
+        if (answeredCount === nextAt) {
           return { a: entry.a, b: entry.b, answer: entry.a * entry.b };
         }
       }
@@ -127,7 +135,8 @@
             if (pi === gameData.currentPuzzleIndex) newUnlocks.push(idx);
           }
         });
-        puzzle.unlockedIndices.sort((a, b) => UNLOCK_ORDER.indexOf(a) - UNLOCK_ORDER.indexOf(b));
+        puzzle.unlockedIndices.sort((a, b) =>
+          UNLOCK_ORDER.indexOf(a) - UNLOCK_ORDER.indexOf(b));
         puzzle.completed = puzzle.unlockedIndices.length >= GAME_CONFIG.CELLS_PER_PUZZLE;
         remaining -= GAME_CONFIG.CELLS_PER_PUZZLE;
         if (remaining <= 0) break;
@@ -145,14 +154,15 @@
       const { a, b } = question;
       const key = `${a}x${b}`;
       next.answeredCount += 1;
-      let pointsEarned = 0;
-      let newUnlocks = [];
+      let pointsEarned = 0, newUnlocks = [];
+
       if (correct) {
         next.combo += 1;
         next.maxCombo = Math.max(next.maxCombo, next.combo);
         next.correctCount += 1;
         pointsEarned = calcPoints(next.combo - 1);
         next.totalScore += pointsEarned;
+        // 複習答對 → 移出隊列
         if (question.isReplay && next.errorTracker[key]) {
           const e = next.errorTracker[key];
           const doneAt = e.replayAt.shift();
@@ -162,9 +172,15 @@
       } else {
         next.combo = 0;
         next.wrongCount += 1;
+        // 只記錄錯題，不做任何讓它立即重複出現的操作
         if (!next.errorTracker[key]) {
-          next.errorTracker[key] = { a, b, replayAt: [...GAME_CONFIG.ERROR_REPLAY_AT], replayed: [] };
+          next.errorTracker[key] = {
+            a, b,
+            replayAt: [...GAME_CONFIG.ERROR_REPLAY_AT],
+            replayed: [],
+          };
         } else {
+          // 補充尚未排程的 checkpoint
           const e = next.errorTracker[key];
           GAME_CONFIG.ERROR_REPLAY_AT.forEach(cp => {
             if (!e.replayAt.includes(cp) && !e.replayed.includes(cp)) e.replayAt.push(cp);
@@ -177,9 +193,9 @@
 
     function generateOptions(correctAnswer) {
       const opts = new Set([correctAnswer]);
-      let attempts = 0;
-      while (opts.size < 4 && attempts < 100) {
-        attempts++;
+      let tries = 0;
+      while (opts.size < 4 && tries < 100) {
+        tries++;
         const offset = Math.floor(Math.random() * 20) - 10;
         const c = correctAnswer + offset;
         if (c > 0 && c !== correctAnswer) opts.add(c);
@@ -187,30 +203,37 @@
       return [...opts].sort(() => Math.random() - 0.5);
     }
 
-    function getUnlockedSet(gameData, puzzleIndex) {
-      return new Set(gameData.puzzles[puzzleIndex]?.unlockedIndices ?? []);
+    function getUnlockedSet(gameData, pi) {
+      return new Set(gameData.puzzles[pi]?.unlockedIndices ?? []);
     }
-
     function puzzleProgress(gameData) {
       const p = gameData.puzzles[gameData.currentPuzzleIndex];
       if (!p) return 0;
       return Math.round((p.unlockedIndices.length / GAME_CONFIG.CELLS_PER_PUZZLE) * 100);
     }
-
     function scoreToNextCell(gameData) {
       const earned = Math.floor(gameData.totalScore / GAME_CONFIG.POINTS_PER_20);
       return (earned + 1) * GAME_CONFIG.POINTS_PER_20 - gameData.totalScore;
     }
 
-    // ─── Audio ───────────────────────────────────────────────────
-    function playSound(src) {
-      try { const a = new Audio(src); a.volume = 0.6; a.play().catch(() => {}); } catch(_) {}
+    // ════════════════════════════════════════════════════════════
+    //  Audio helper  ← getElementById, no new Audio()
+    // ════════════════════════════════════════════════════════════
+    function playSound(id) {
+      try {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.currentTime = 0;
+        el.play().catch(() => {});
+      } catch (_) {}
     }
 
-    // ─── useCountdown ─────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    //  useCountdown
+    // ════════════════════════════════════════════════════════════
     function useCountdown(seconds, onExpire) {
       const [remaining, setRemaining] = useState(seconds);
-      const timerRef = useRef(null);
+      const timerRef    = useRef(null);
       const onExpireRef = useRef(onExpire);
       useEffect(() => { onExpireRef.current = onExpire; }, [onExpire]);
 
@@ -230,113 +253,191 @@
       return { remaining, reset, stop };
     }
 
-    // ─── PuzzleGrid ───────────────────────────────────────────────
-    function PuzzleGrid({ backgroundImage, unlockedSet, newlyUnlocked }) {
-      const COLS = 4, ROWS = 3;
-      return React.createElement('div', { className: 'puzzle-grid' },
-        Array.from({ length: COLS * ROWS }, (_, i) => {
-          const col = i % COLS, row = Math.floor(i / COLS);
-          const revealed = unlockedSet.has(i);
-          const flashing = newlyUnlocked.has(i);
-          const bpX = (col / (COLS - 1)) * 100;
-          const bpY = (row / (ROWS - 1)) * 100;
-          return React.createElement('div', {
-            key: i,
-            className: ['puzzle-cell', revealed ? 'revealed' : 'masked', flashing ? 'unlocking' : ''].filter(Boolean).join(' '),
-            style: {
-              backgroundImage: `url(${backgroundImage})`,
-              backgroundSize: `${COLS * 100}% ${ROWS * 100}%`,
-              backgroundPosition: `${bpX}% ${bpY}%`,
-            },
-          }, !revealed ? React.createElement('span', { className: 'mask-icon' }, '🔒') : null);
-        })
-      );
-    }
+    // ════════════════════════════════════════════════════════════
+    //  Pages enum
+    // ════════════════════════════════════════════════════════════
+    const PAGE = { LOGIN: 'login', MENU: 'menu', GAME: 'game' };
+    const e = React.createElement;
 
-    // ─── CongratsOverlay ──────────────────────────────────────────
-    function CongratsOverlay({ puzzleIndex, onNext, onViewPuzzle }) {
-      const isLast = puzzleIndex >= GAME_CONFIG.TOTAL_PUZZLES - 1;
-      return React.createElement('div', { className: 'congrats-overlay' },
-        React.createElement('div', { className: 'congrats-card' },
-          React.createElement('div', { className: 'congrats-emoji' }, '🎉'),
-          React.createElement('h2', null, '拼圖完成！'),
-          React.createElement('p', null, '第 ', React.createElement('strong', null, puzzleIndex + 1), ' 幅圖解鎖完畢，你太厲害了！'),
-          React.createElement('div', { className: 'congrats-actions' },
-            React.createElement('button', { className: 'btn-secondary', onClick: onViewPuzzle }, '欣賞拼圖'),
-            !isLast && React.createElement('button', { className: 'btn-primary', onClick: onNext }, '繼續挑戰 →'),
-            isLast && React.createElement('p', { className: 'all-done' }, '🏆 全部 10 幅拼圖已完成！你是乘法冠軍！'),
-          )
-        )
-      );
-    }
-
-    // ─── LoginScreen ──────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    //  LoginScreen
+    // ════════════════════════════════════════════════════════════
     function LoginScreen({ onLogin }) {
-      const [name, setName] = useState('');
-      const [pass, setPass] = useState('');
-      const [error, setError] = useState('');
+      const [name, setName]       = useState('');
+      const [pass, setPass]       = useState('');
+      const [error, setError]     = useState('');
       const [loading, setLoading] = useState(false);
 
-      const handleSubmit = async () => {
+      const submit = async () => {
         if (!name.trim() || !pass.trim()) { setError('請輸入名字與密碼'); return; }
         if (pass.length < 6) { setError('密碼至少需要 6 個字元'); return; }
         setLoading(true); setError('');
-        const result = await gameClient.login(name.trim(), pass, createDefaultGameData());
+        const r = await gameClient.login(name.trim(), pass, createDefaultGameData());
         setLoading(false);
-        if (result.success) onLogin(result.data || createDefaultGameData());
-        else setError(result.message || '登入失敗，請再試一次');
+        if (r.success) onLogin(r.data || createDefaultGameData());
+        else setError(r.message || '登入失敗，請再試一次');
       };
 
-      const e = React.createElement;
       return e('div', { className: 'login-screen' },
         e('div', { className: 'login-card' },
           e('div', { className: 'login-logo' }, '✖'),
           e('h1', { className: 'login-title' }, '乘法神速賽'),
-          e('p', { className: 'login-subtitle' }, '解鎖拼圖，挑戰極速乘法！'),
+          e('p',  { className: 'login-subtitle' }, '解鎖拼圖，挑戰極速乘法！'),
           e('div', { className: 'field-group' },
             e('label', null, '訓練師名字'),
             e('input', { type: 'text', placeholder: '輸入你的名字…', value: name,
               onChange: ev => setName(ev.target.value),
-              onKeyDown: ev => ev.key === 'Enter' && handleSubmit() })
+              onKeyDown: ev => ev.key === 'Enter' && submit() })
           ),
           e('div', { className: 'field-group' },
             e('label', null, '密碼（至少 6 字）'),
             e('input', { type: 'password', placeholder: '設定或輸入密碼…', value: pass,
               onChange: ev => setPass(ev.target.value),
-              onKeyDown: ev => ev.key === 'Enter' && handleSubmit() })
+              onKeyDown: ev => ev.key === 'Enter' && submit() })
           ),
           error ? e('p', { className: 'login-error' }, error) : null,
-          e('button', { className: 'btn-primary', onClick: handleSubmit, disabled: loading },
-            loading ? '連線中…' : '開始遊戲 →')
+          e('button', { className: 'btn-primary', onClick: submit, disabled: loading },
+            loading ? '連線中…' : '進入遊戲 →')
         )
       );
     }
 
-    // ─── App ──────────────────────────────────────────────────────
-    function App() {
-      const [loggedIn, setLoggedIn] = useState(false);
-      const [gameData, setGameData] = useState(null);
-      const [question, setQuestion] = useState(null);
-      const [options, setOptions] = useState([]);
-      const [feedback, setFeedback] = useState(null);
-      const [selectedOption, setSelectedOption] = useState(null);
-      const [locked, setLocked] = useState(false);
-      const [newlyUnlocked, setNewlyUnlocked] = useState(new Set());
-      const [showCongrats, setShowCongrats] = useState(false);
-      const [saveStatus, setSaveStatus] = useState('');
-      const gameDataRef = useRef(null);
-      const questionRef = useRef(null);
-      const lockedRef = useRef(false);
+    // ════════════════════════════════════════════════════════════
+    //  MainMenu
+    // ════════════════════════════════════════════════════════════
+    function MainMenu({ gameData, onStartGame }) {
+      // 常錯清單：依待複習次數排序，取前 10
+      const top10 = Object.values(gameData.errorTracker || {})
+        .sort((a, b) =>
+          (b.replayAt?.length ?? 0) - (a.replayAt?.length ?? 0) ||
+          (b.replayed?.length ?? 0) - (a.replayed?.length ?? 0))
+        .slice(0, 10);
 
-      // Keep refs in sync
+      // 已解鎖照片
+      const unlockedPhotos = gameData.puzzles
+        .map((p, i) => ({ index: i, count: p.unlockedIndices.length, completed: p.completed }))
+        .filter(p => p.count > 0);
+
+      return e('div', { className: 'menu-screen' },
+        e('div', { className: 'menu-header' },
+          e('h1', { className: 'login-title' }, '乘法神速賽'),
+          e('p',  { className: 'menu-score' }, '累積得分：', e('strong', null, gameData.totalScore))
+        ),
+        e('button', { className: 'btn-primary btn-start', onClick: onStartGame }, '▶ 開始遊戲'),
+        e('div', { className: 'menu-panels' },
+          // 常錯清單
+          e('div', { className: 'menu-panel' },
+            e('h2', { className: 'panel-title' }, '📋 常錯 10 題'),
+            top10.length === 0
+              ? e('p', { className: 'panel-empty' }, '尚無錯題紀錄，繼續加油！')
+              : e('ul', { className: 'error-list' },
+                  ...top10.map(entry =>
+                    e('li', { key: `${entry.a}x${entry.b}`, className: 'error-item' },
+                      e('span', { className: 'error-eq' }, `${entry.a} × ${entry.b} = ${entry.a * entry.b}`),
+                      e('span', { className: 'error-badge' }, `待複習 ${entry.replayAt?.length ?? 0} 次`)
+                    )
+                  )
+                )
+          ),
+          // 已解鎖照片
+          e('div', { className: 'menu-panel' },
+            e('h2', { className: 'panel-title' }, '🖼 解鎖照片'),
+            unlockedPhotos.length === 0
+              ? e('p', { className: 'panel-empty' }, '尚未解鎖任何圖片，快去答題！')
+              : e('div', { className: 'photo-list' },
+                  ...unlockedPhotos.map(p =>
+                    e('div', { key: p.index, className: 'photo-thumb-wrap' },
+                      e('div', {
+                        className: 'photo-thumb',
+                        style: { backgroundImage: `url(images/puzzle_${p.index}.png)` }
+                      },
+                        p.completed
+                          ? e('div', { className: 'photo-thumb-done' }, '✓')
+                          : e('div', { className: 'photo-thumb-overlay' },
+                              `${p.count}/${GAME_CONFIG.CELLS_PER_PUZZLE}`)
+                      ),
+                      e('span', { className: 'photo-label' }, `拼圖 ${p.index + 1}`)
+                    )
+                  )
+                )
+          )
+        )
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  PuzzleGrid
+    // ════════════════════════════════════════════════════════════
+    function PuzzleGrid({ backgroundImage, unlockedSet, newlyUnlocked }) {
+      const COLS = 4, ROWS = 3;
+      return e('div', { className: 'puzzle-grid' },
+        ...Array.from({ length: COLS * ROWS }, (_, i) => {
+          const col = i % COLS, row = Math.floor(i / COLS);
+          const revealed = unlockedSet.has(i);
+          const flashing = newlyUnlocked.has(i);
+          const bpX = (col / (COLS - 1)) * 100;
+          const bpY = (row / (ROWS - 1)) * 100;
+          return e('div', {
+            key: i,
+            className: ['puzzle-cell', revealed ? 'revealed' : 'masked', flashing ? 'unlocking' : '']
+              .filter(Boolean).join(' '),
+            style: {
+              backgroundImage: `url(${backgroundImage})`,
+              backgroundSize:  `${COLS * 100}% ${ROWS * 100}%`,
+              backgroundPosition: `${bpX}% ${bpY}%`,
+            },
+          }, !revealed ? e('span', { className: 'mask-icon' }, '🔒') : null);
+        })
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  CongratsOverlay
+    // ════════════════════════════════════════════════════════════
+    function CongratsOverlay({ puzzleIndex, onNext, onMenu }) {
+      const isLast = puzzleIndex >= GAME_CONFIG.TOTAL_PUZZLES - 1;
+      return e('div', { className: 'congrats-overlay' },
+        e('div', { className: 'congrats-card' },
+          e('div', { className: 'congrats-emoji' }, '🎉'),
+          e('h2',  null, '拼圖完成！'),
+          e('p',   null, '第 ', e('strong', null, puzzleIndex + 1), ' 幅圖解鎖完畢，你太厲害了！'),
+          e('div', { className: 'congrats-actions' },
+            e('button', { className: 'btn-secondary', onClick: onMenu }, '回主選單'),
+            !isLast && e('button', { className: 'btn-primary', onClick: onNext }, '繼續挑戰 →'),
+            isLast  && e('p', { className: 'all-done' }, '🏆 全部 10 幅拼圖已完成！你是乘法冠軍！')
+          )
+        )
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  GameScreen
+    // ════════════════════════════════════════════════════════════
+    function GameScreen({ gameData: initialData, onDataUpdate, onExit }) {
+      const [gameData, setGameData]             = useState(initialData);
+      const [question, setQuestion]             = useState(null);
+      const [options,  setOptions]              = useState([]);
+      const [feedback, setFeedback]             = useState(null);
+      const [selectedOption, setSelectedOption] = useState(null);
+      const [locked,  setLocked]                = useState(false);
+      const [newlyUnlocked, setNewlyUnlocked]   = useState(new Set());
+      const [showCongrats, setShowCongrats]     = useState(false);
+      const [saveStatus, setSaveStatus]         = useState('');
+
+      const gameDataRef = useRef(initialData);
+      const questionRef = useRef(null);
+      const lockedRef   = useRef(false);
       useEffect(() => { gameDataRef.current = gameData; }, [gameData]);
       useEffect(() => { questionRef.current = question; }, [question]);
-      useEffect(() => { lockedRef.current = locked; }, [locked]);
+      useEffect(() => { lockedRef.current   = locked;   }, [locked]);
 
       const loadQuestion = useCallback(data => {
         const q = generateQuestion(data.errorTracker, data.answeredCount);
-        setQuestion(q); setOptions(generateOptions(q.answer));
-        setFeedback(null); setSelectedOption(null); setLocked(false);
+        setQuestion(q);
+        setOptions(generateOptions(q.answer));
+        setFeedback(null);
+        setSelectedOption(null);
+        setLocked(false);
       }, []);
 
       const handleExpire = useCallback(() => {
@@ -344,7 +445,8 @@
         handleAnswer(-1);
       }, []);
 
-      const { remaining, reset: resetTimer, stop: stopTimer } = useCountdown(3, handleExpire);
+      const { remaining, reset: resetTimer, stop: stopTimer } =
+        useCountdown(3, handleExpire);
 
       async function handleAnswer(playerAnswer) {
         if (lockedRef.current || !questionRef.current || !gameDataRef.current) return;
@@ -352,84 +454,85 @@
         stopTimer();
         setSelectedOption(playerAnswer);
 
-        const { gameData: nextData, correct, newUnlocks } = processAnswer(
-          gameDataRef.current, questionRef.current, playerAnswer
-        );
+        const { gameData: nextData, correct, newUnlocks } =
+          processAnswer(gameDataRef.current, questionRef.current, playerAnswer);
 
         setFeedback(correct ? 'correct' : 'wrong');
-        playSound(correct ? 'audio/correct.mp3' : 'audio/wrong.mp3');
+        playSound(correct ? 'snd-correct' : 'snd-wrong');
 
         if (newUnlocks.length > 0) {
+          playSound('snd-unlock');
           setNewlyUnlocked(new Set(newUnlocks));
-          setTimeout(() => setNewlyUnlocked(new Set()), 1200);
+          setTimeout(() => setNewlyUnlocked(new Set()), 1400);
         }
 
-        const prevPuzzle = gameDataRef.current.puzzles[gameDataRef.current.currentPuzzleIndex];
+        const prevIdx    = gameDataRef.current.currentPuzzleIndex;
+        const prevPuzzle = gameDataRef.current.puzzles[prevIdx];
+        const justCompleted = nextData.puzzles[prevIdx]?.completed && !prevPuzzle?.completed;
+
         setGameData(nextData);
+        onDataUpdate(nextData);
 
         setSaveStatus('saving');
-        const saveResult = await gameClient.saveScore(nextData);
-        setSaveStatus(saveResult.success ? 'saved' : 'error');
+        const sr = await gameClient.saveScore(nextData);
+        setSaveStatus(sr.success ? 'saved' : 'error');
         setTimeout(() => setSaveStatus(''), 2000);
 
-        const nowPuzzle = nextData.puzzles[nextData.currentPuzzleIndex];
-        // check if the puzzle we were on just got completed
-        const justCompleted = nextData.puzzles[gameDataRef.current.currentPuzzleIndex]?.completed
-          && !prevPuzzle?.completed;
+        if (justCompleted) {
+          playSound('snd-complete');
+          setTimeout(() => setShowCongrats(true), 1500);  // 1.5 s 緩衝
+          return;
+        }
 
-        if (justCompleted) { setShowCongrats(true); return; }
-
-        setTimeout(() => { loadQuestion(nextData); resetTimer(3); }, 800);
+        // ── 凍結 1.5 秒後進下一題 ────────────────────────────────
+        setTimeout(() => { loadQuestion(nextData); resetTimer(3); }, 1500);
       }
 
-      function handleLogin(data) { setGameData(data); setLoggedIn(true); }
+      useEffect(() => { loadQuestion(initialData); resetTimer(3); }, []);
 
-      useEffect(() => {
-        if (loggedIn && gameData) { loadQuestion(gameData); resetTimer(3); }
-      }, [loggedIn]);
+      function handleContinue() {
+        setShowCongrats(false);
+        loadQuestion(gameData);
+        resetTimer(3);
+      }
 
-      function handleContinue() { setShowCongrats(false); loadQuestion(gameData); resetTimer(3); }
+      if (!question) return e('div', { className: 'loading-screen' },
+        e('div', { className: 'spinner' }), e('p', null, '載入中…'));
 
-      if (!loggedIn) return React.createElement(LoginScreen, { onLogin: handleLogin });
-      if (!gameData || !question) return React.createElement('div', { className: 'loading-screen' },
-        React.createElement('div', { className: 'spinner' }),
-        React.createElement('p', null, '載入中…')
-      );
-
-      const pidx = gameData.currentPuzzleIndex;
+      const pidx        = gameData.currentPuzzleIndex;
       const unlockedSet = getUnlockedSet(gameData, pidx);
-      const progress = puzzleProgress(gameData);
-      const toNext = scoreToNextCell(gameData);
-      const combo = gameData.combo;
-      const comboLabel = combo >= 6 ? '🔥🔥🔥 MAX COMBO'
-        : combo >= 3 ? `🔥 COMBO x${combo}`
-        : combo > 0 ? `Combo x${combo}` : '';
-      const timerFraction = remaining / 3;
-      const timerColor = remaining <= 1 ? '#ef4444' : remaining <= 2 ? '#f59e0b' : '#22c55e';
+      const progress    = puzzleProgress(gameData);
+      const toNext      = scoreToNextCell(gameData);
+      const combo       = gameData.combo;
+      const comboLabel  = combo >= 6 ? '🔥🔥🔥 MAX COMBO'
+        : combo >= 3 ? `🔥 COMBO x${combo}` : combo > 0 ? `Combo x${combo}` : '';
+      const tf = remaining / 3;
+      const tc = remaining <= 1 ? '#ef4444' : remaining <= 2 ? '#f59e0b' : '#22c55e';
 
-      const e = React.createElement;
       return e('div', { className: 'game-screen' },
         // HUD
         e('header', { className: 'hud' },
           e('div', { className: 'hud-score' },
             e('span', { className: 'hud-label' }, '得分'),
-            e('span', { className: 'hud-value' }, gameData.totalScore)
-          ),
+            e('span', { className: 'hud-value' }, gameData.totalScore)),
           e('div', { className: 'hud-center' },
-            e('div', { className: 'timer-ring', style: { '--fraction': timerFraction, '--color': timerColor } },
-              e('span', { className: 'timer-number' }, remaining)
-            )
-          ),
-          e('div', { className: 'hud-puzzle' },
-            e('span', { className: 'hud-label' }, `拼圖 ${pidx + 1}/10`),
-            e('span', { className: 'hud-value' }, `${progress}%`)
-          )
+            e('div', { className: 'timer-ring',
+              style: { '--fraction': tf, '--color': tc } },
+              e('span', { className: 'timer-number' }, remaining))),
+          e('div', { className: 'hud-right' },
+            e('div', { className: 'hud-puzzle' },
+              e('span', { className: 'hud-label' }, `拼圖 ${pidx+1}/10`),
+              e('span', { className: 'hud-value' }, `${progress}%`)),
+            e('button', { className: 'btn-exit', onClick: onExit }, '✕ 退出'))
         ),
-        // Combo
         comboLabel ? e('div', { className: `combo-banner${combo >= 6 ? ' max' : ''}` }, comboLabel) : null,
         // Puzzle
         e('section', { className: 'puzzle-section' },
-          e(PuzzleGrid, { backgroundImage: `images/puzzle_${pidx}.png`, unlockedSet, newlyUnlocked }),
+          e(PuzzleGrid, {
+            backgroundImage: `images/puzzle_${pidx}.png`,
+            unlockedSet,
+            newlyUnlocked,
+          }),
           e('p', { className: 'next-unlock-hint' }, `再 ${toNext} 分解鎖下一格`)
         ),
         // Question
@@ -451,26 +554,45 @@
               if (opt === question.answer) cls += ' correct';
               else if (opt === selectedOption) cls += ' wrong';
             }
-            return e('button', { key: opt, className: cls, onClick: () => handleAnswer(opt), disabled: locked }, opt);
+            return e('button', { key: opt, className: cls,
+              onClick: () => handleAnswer(opt), disabled: locked }, opt);
           })
         ),
         // Feedback
         feedback ? e('div', { className: `feedback-flash ${feedback}` },
           feedback === 'correct' ? '✓ 正確！' : '✗ 再加油！') : null,
         // Save status
-        // saveStatus ? e('div', { className: `save-status ${saveStatus}` },
-        // saveStatus === 'saving' ? '☁️ 儲存中…' : saveStatus === 'saved' ? '✅ 已儲存' : '⚠️ 儲存失敗') : null,
+        saveStatus ? e('div', { className: `save-status ${saveStatus}` },
+          saveStatus === 'saving' ? '☁️ 儲存中…'
+          : saveStatus === 'saved' ? '✅ 已儲存' : '⚠️ 儲存失敗') : null,
         // Congrats
         showCongrats ? e(CongratsOverlay, {
-          puzzleIndex: pidx,
-          onNext: handleContinue,
-          onViewPuzzle: () => setShowCongrats(false)
-        }) : null
+          puzzleIndex: pidx, onNext: handleContinue, onMenu: onExit }) : null
       );
     }
 
-    // ─── Mount ────────────────────────────────────────────────────
-    createRoot(document.getElementById('root')).render(React.createElement(App));
+    // ════════════════════════════════════════════════════════════
+    //  Root App
+    // ════════════════════════════════════════════════════════════
+    function App() {
+      const [page, setPage]         = useState(PAGE.LOGIN);
+      const [gameData, setGameData] = useState(null);
+
+      if (page === PAGE.LOGIN) return e(LoginScreen, {
+        onLogin: data => { setGameData(data); setPage(PAGE.MENU); }
+      });
+      if (page === PAGE.MENU)  return e(MainMenu, {
+        gameData,
+        onStartGame: () => setPage(PAGE.GAME),
+      });
+      if (page === PAGE.GAME)  return e(GameScreen, {
+        gameData,
+        onDataUpdate: d => setGameData(d),
+        onExit: () => setPage(PAGE.MENU),
+      });
+    }
+
+    createRoot(document.getElementById('root')).render(e(App));
   </script>
 </body>
 </html>
