@@ -635,34 +635,29 @@ body::before {
   padding: 0.5rem 0;
 }
 
-/* ── Error list ───────────────────────────────────────────── */
-.error-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
+/* ── Error grid (2 cols × 5 rows) ────────────────────────── */
+.error-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
 .error-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   background: var(--surface-2);
   border-radius: var(--radius);
-  padding: 0.55rem 0.9rem;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .error-eq {
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--text);
+  text-align: center;
+  line-height: 1.4;
 }
-.error-badge {
-  font-size: 0.72rem;
-  color: var(--warn);
-  background: rgba(251, 191, 36, 0.12);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-  white-space: nowrap;
+.error-eq strong {
+  color: var(--accent);
 }
 
 /* ── Photo grid: 2 cols × 5 rows ─────────────────────────── */

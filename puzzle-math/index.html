@@ -12,8 +12,8 @@
   <!-- ══ 音效預載（4 種）══════════════════════════════════════════ -->
   <audio id="snd-correct" src="https://cdn.freesound.org/previews/341/341695_5858296-lq.mp3" preload="auto"></audio>
   <audio id="snd-wrong"   src="https://cdn.freesound.org/previews/142/142608_1840739-lq.mp3" preload="auto"></audio>
-  <audio id="snd-unlock"  src="https://freesound.org/people/Mudkip2016/sounds/423930/download/423930__mudkip2016__correct.wav" preload="auto"></audio>
-  <audio id="snd-complete" src="https://cdn.freesound.org/previews/572/572990_11867169-lq.mp3" preload="auto"></audio>
+  <audio id="snd-unlock"  src="https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3" preload="auto"></audio>
+  <audio id="snd-complete" src="https://cdn.freesound.org/previews/397/397353_4284968-lq.mp3" preload="auto"></audio>
 </head>
 <body>
   <div id="root"></div>
@@ -121,6 +121,10 @@
     }
 
     function applyScoreToPuzzle(gameData) {
+      // 若所有拼圖已全部完成，直接返回空陣列，不做任何解鎖動作
+      const allDone = gameData.puzzles.every(p => p.completed);
+      if (allDone) return [];
+
       const newUnlocks = [];
       const totalCellsEarned = Math.floor(gameData.totalScore / GAME_CONFIG.POINTS_PER_20);
       let remaining = totalCellsEarned;
@@ -141,8 +145,11 @@
         remaining -= GAME_CONFIG.CELLS_PER_PUZZLE;
         if (remaining <= 0) break;
       }
-      if (gameData.puzzles[gameData.currentPuzzleIndex]?.completed &&
-          gameData.currentPuzzleIndex < GAME_CONFIG.TOTAL_PUZZLES - 1) {
+      // 只在還有下一張時才推進 currentPuzzleIndex
+      if (
+        gameData.puzzles[gameData.currentPuzzleIndex]?.completed &&
+        gameData.currentPuzzleIndex < GAME_CONFIG.TOTAL_PUZZLES - 1
+      ) {
         gameData.currentPuzzleIndex += 1;
       }
       return newUnlocks;
@@ -306,12 +313,10 @@
     //  MainMenu
     // ════════════════════════════════════════════════════════════
     function MainMenu({ gameData, onStartGame }) {
-      // 常錯清單：依待複習次數排序，取前 10
-      const top10 = Object.values(gameData.errorTracker || {})
-        .sort((a, b) =>
-          (b.replayAt?.length ?? 0) - (a.replayAt?.length ?? 0) ||
-          (b.replayed?.length ?? 0) - (a.replayed?.length ?? 0))
-        .slice(0, 10);
+      // 最近錯題：依 errorTracker 中的順序取前 10，最新答錯的排前面
+      const recent10 = Object.values(gameData.errorTracker || {})
+        .slice(-10)          // 最後記錄的 10 筆（最近答錯）
+        .reverse();          // 最新的排最前
 
       return e('div', { className: 'menu-screen' },
         e('div', { className: 'menu-header' },
@@ -320,16 +325,18 @@
         ),
         e('button', { className: 'btn-primary btn-start', onClick: onStartGame }, '▶ 開始遊戲'),
         e('div', { className: 'menu-panels' },
-          // 常錯清單
+          // 最近錯題
           e('div', { className: 'menu-panel' },
-            e('h2', { className: 'panel-title' }, '📋 常錯 10 題'),
-            top10.length === 0
+            e('h2', { className: 'panel-title' }, '📋 最近錯的 10 題'),
+            recent10.length === 0
               ? e('p', { className: 'panel-empty' }, '尚無錯題紀錄，繼續加油！')
-              : e('ul', { className: 'error-list' },
-                  ...top10.map(entry =>
-                    e('li', { key: `${entry.a}x${entry.b}`, className: 'error-item' },
-                      e('span', { className: 'error-eq' }, `${entry.a} × ${entry.b} = ${entry.a * entry.b}`),
-                      e('span', { className: 'error-badge' }, `待複習 ${entry.replayAt?.length ?? 0} 次`)
+              : e('div', { className: 'error-grid' },
+                  ...recent10.map(entry =>
+                    e('div', { key: `${entry.a}x${entry.b}`, className: 'error-item' },
+                      e('span', { className: 'error-eq' },
+                        `${entry.a} × ${entry.b} = `,
+                        e('strong', null, `${entry.a * entry.b}`)
+                      )
                     )
                   )
                 )
@@ -393,17 +400,22 @@
     // ════════════════════════════════════════════════════════════
     //  CongratsOverlay
     // ════════════════════════════════════════════════════════════
-    function CongratsOverlay({ puzzleIndex, onNext, onMenu }) {
+    function CongratsOverlay({ puzzleIndex, onNext, onMenu, onKeepPlaying }) {
       const isLast = puzzleIndex >= GAME_CONFIG.TOTAL_PUZZLES - 1;
       return e('div', { className: 'congrats-overlay' },
         e('div', { className: 'congrats-card' },
-          e('div', { className: 'congrats-emoji' }, '🎉'),
-          e('h2',  null, '拼圖完成！'),
-          e('p',   null, '第 ', e('strong', null, puzzleIndex + 1), ' 幅圖解鎖完畢，你太厲害了！'),
+          e('div', { className: 'congrats-emoji' }, isLast ? '🏆' : '🎉'),
+          e('h2',  null, isLast ? '全部完成！' : '拼圖完成！'),
+          e('p',   null,
+            isLast
+              ? '你解鎖了全部 10 幅拼圖，是乘法冠軍！繼續練習讓反應更快吧！'
+              : e('span', null, '第 ', e('strong', null, puzzleIndex + 1), ' 幅圖解鎖完畢，你太厲害了！')
+          ),
           e('div', { className: 'congrats-actions' },
             e('button', { className: 'btn-secondary', onClick: onMenu }, '回主選單'),
-            !isLast && e('button', { className: 'btn-primary', onClick: onNext }, '繼續挑戰 →'),
-            isLast  && e('p', { className: 'all-done' }, '🏆 全部 10 幅拼圖已完成！你是乘法冠軍！')
+            isLast
+              ? e('button', { className: 'btn-primary', onClick: onKeepPlaying }, '繼續練習 ∞')
+              : e('button', { className: 'btn-primary', onClick: onNext }, '繼續挑戰 →')
           )
         )
       );
@@ -502,6 +514,7 @@
       const unlockedSet = getUnlockedSet(gameData, pidx);
       const progress    = puzzleProgress(gameData);
       const toNext      = scoreToNextCell(gameData);
+      const allPuzzlesDone = gameData.puzzles.every(p => p.completed);
       const combo       = gameData.combo;
       const comboLabel  = combo >= 6 ? '🔥🔥🔥 MAX COMBO'
         : combo >= 3 ? `🔥 COMBO x${combo}` : combo > 0 ? `Combo x${combo}` : '';
@@ -520,8 +533,8 @@
               e('span', { className: 'timer-number' }, remaining))),
           e('div', { className: 'hud-right' },
             e('div', { className: 'hud-puzzle' },
-              e('span', { className: 'hud-label' }, `拼圖 ${pidx+1}/10`),
-              e('span', { className: 'hud-value' }, `${progress}%`)),
+              e('span', { className: 'hud-label' }, allPuzzlesDone ? '拼圖' : `拼圖 ${pidx+1}/10`),
+              e('span', { className: 'hud-value' }, allPuzzlesDone ? '🏆' : `${progress}%`)),
             e('button', { className: 'btn-exit', onClick: onExit }, '✕ 退出'))
         ),
         comboLabel ? e('div', { className: `combo-banner${combo >= 6 ? ' max' : ''}` }, comboLabel) : null,
@@ -532,7 +545,9 @@
             unlockedSet,
             newlyUnlocked,
           }),
-          e('p', { className: 'next-unlock-hint' }, `再 ${toNext} 分解鎖下一格`)
+          e('p', { className: 'next-unlock-hint' },
+            allPuzzlesDone ? '🏆 全部拼圖已完成，繼續挑戰！' : `再 ${toNext} 分解鎖下一格`
+          )
         ),
         // Question
         e('section', { className: 'question-section' },
@@ -562,7 +577,11 @@
           feedback === 'correct' ? '✓ 正確！' : '✗ 再加油！') : null,
         // Congrats
         showCongrats ? e(CongratsOverlay, {
-          puzzleIndex: pidx, onNext: handleContinue, onMenu: onExit }) : null
+          puzzleIndex: pidx,
+          onNext: handleContinue,
+          onMenu: onExit,
+          onKeepPlaying: handleContinue,   // 全部完成後繼續出題，不再解鎖
+        }) : null
       );
     }
 
