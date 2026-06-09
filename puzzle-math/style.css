@@ -256,7 +256,8 @@ body::after {
   color: #04050f;
   box-shadow: var(--glow-cyan);
   position: relative;
-  overflow: hidden;
+  /* 移除 overflow:hidden，改用 ::after pointer-events:none 不影響文字 */
+  white-space: nowrap;
 }
 .btn-primary::after {
   content: '';
@@ -264,6 +265,7 @@ body::after {
   inset: 0;
   background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%);
   pointer-events: none;
+  border-radius: inherit;
 }
 .btn-primary:hover   { transform: translateY(-2px); box-shadow: 0 0 28px rgba(0,245,212,0.8), 0 0 60px rgba(0,245,212,0.2); }
 .btn-primary:active  { transform: scale(0.97); }
@@ -692,9 +694,10 @@ body::after {
 .btn-start {
   width: 100%;
   max-width: 360px;
-  font-size: 1.1rem;
-  padding: 1.15rem;
-  letter-spacing: 0.14em;
+  font-size: 1.05rem;
+  padding: 1.15rem 1.5rem;
+  letter-spacing: 0.08em;   /* 收窄，避免文字顯示不全 */
+  white-space: nowrap;
 }
 
 .menu-panels {
