@@ -13,7 +13,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, message: '請輸入完整的名字與密碼！' });
   }
 
-  // 💡 2. 密碼長度驗證：最少 6 個字
+  // 2. 用戶名長度驗證：最少 4 個字元
+  if (trainerName.trim().length < 4) {
+    return res.status(400).json({ success: false, message: '訓練師名字不能少於 4 個字元！' });
+  }
+  //  密碼長度驗證：最少 6 個字
   if (password.length < 6) {
     return res.status(400).json({ success: false, message: '密碼長度不能少於 6 個字！' });
   }
