@@ -314,7 +314,7 @@ body::before {
 
 /* MASKED: dark overlay with lock icon */
 .puzzle-cell.masked {
-  filter: brightness(0) saturate(0);
+  filter: brightness(0.15) saturate(0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -436,8 +436,6 @@ body::before {
   font-family: var(--font-display);
   font-size: 1.6rem;
   padding: 0.7rem 1.8rem;
-  /* min-width: 100px;           強制最小寬度，確保不會擠壓 */
-  white-space: nowrap;       /* 強制文字不換行 */
   border-radius: 999px;
   pointer-events: none;
   animation: flash-in 0.8s ease forwards;
@@ -462,28 +460,7 @@ body::before {
   100% { opacity: 0; transform: translate(-50%,-50%) scale(1); }
 }
 
-/* ── Save Status ──────────────────────────────────────────── */
-.save-status {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.78rem;
-  padding: 0.35rem 1rem;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  animation: fade-up 0.3s ease;
-  pointer-events: none;
-  z-index: 200;
-}
-.save-status.saved  { color: var(--success); border-color: var(--success); }
-.save-status.error  { color: var(--danger);  border-color: var(--danger); }
-.save-status.saving { color: var(--text-muted); }
-@keyframes fade-up {
-  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
+/* (save-status removed — silent background save) */
 
 /* ── Congrats Overlay ─────────────────────────────────────── */
 .congrats-overlay {
@@ -559,4 +536,205 @@ body::before {
 .option-btn, .btn-primary, .btn-secondary {
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* ── HUD right cluster (puzzle% + exit) ──────────────────── */
+.hud-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+/* ── Exit button ──────────────────────────────────────────── */
+.btn-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(10, 10, 30, 0.65);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 999px;
+  color: rgba(239, 68, 68, 0.85);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn-exit:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+.btn-exit:active { transform: scale(0.95); }
+
+/* ── Main Menu ────────────────────────────────────────────── */
+.menu-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem 1rem 2rem;
+  min-height: 100dvh;
+  overflow-y: auto;
+}
+
+.menu-header { text-align: center; }
+.menu-score {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+}
+.menu-score strong { color: var(--accent); font-family: var(--font-display); }
+
+.btn-start {
+  width: 100%;
+  max-width: 360px;
+  font-size: 1.15rem;
+  padding: 1.1rem;
+  letter-spacing: 0.06em;
+}
+
+.menu-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 540px;
+}
+
+.menu-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+
+.panel-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* ── Error list ───────────────────────────────────────────── */
+.error-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.error-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.9rem;
+}
+.error-eq {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.error-badge {
+  font-size: 0.72rem;
+  color: var(--warn);
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+}
+
+/* ── Photo grid: 2 cols × 5 rows ─────────────────────────── */
+.photo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.photo-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.photo-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.photo-thumb.completed {
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+
+/* Locked placeholder */
+.photo-thumb.locked {
+  background: #080c1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-color: rgba(255,255,255,0.08);
+}
+.photo-lock-icon {
+  font-size: 1.6rem;
+  opacity: 0.4;
+}
+
+/* Partially unlocked overlay */
+.photo-thumb-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(4, 5, 15, 0.72);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  text-align: center;
+  padding: 0.25rem;
+}
+
+/* Completed tick */
+.photo-thumb-done {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  background: rgba(4, 5, 15, 0.45);
+  color: var(--success);
+  text-shadow: 0 0 10px var(--success);
+}
+
+.photo-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-display);
 }

@@ -313,11 +313,6 @@
           (b.replayed?.length ?? 0) - (a.replayed?.length ?? 0))
         .slice(0, 10);
 
-      // 已解鎖照片
-      const unlockedPhotos = gameData.puzzles
-        .map((p, i) => ({ index: i, count: p.unlockedIndices.length, completed: p.completed }))
-        .filter(p => p.count > 0);
-
       return e('div', { className: 'menu-screen' },
         e('div', { className: 'menu-header' },
           e('h1', { className: 'login-title' }, '乘法神速賽'),
@@ -339,27 +334,31 @@
                   )
                 )
           ),
-          // 已解鎖照片
+          // 已解鎖照片 — 固定顯示全部 10 張（含未解鎖佔位）
           e('div', { className: 'menu-panel' },
             e('h2', { className: 'panel-title' }, '🖼 解鎖照片'),
-            unlockedPhotos.length === 0
-              ? e('p', { className: 'panel-empty' }, '尚未解鎖任何圖片，快去答題！')
-              : e('div', { className: 'photo-list' },
-                  ...unlockedPhotos.map(p =>
-                    e('div', { key: p.index, className: 'photo-thumb-wrap' },
-                      e('div', {
-                        className: 'photo-thumb',
-                        style: { backgroundImage: `url(images/puzzle_${p.index}.png)` }
+            e('div', { className: 'photo-grid' },
+              ...Array.from({ length: GAME_CONFIG.TOTAL_PUZZLES }, (_, i) => {
+                const p = gameData.puzzles[i];
+                const unlocked = p.unlockedIndices.length > 0;
+                return e('div', { key: i, className: 'photo-thumb-wrap' },
+                  unlocked
+                    ? e('div', {
+                        className: `photo-thumb${p.completed ? ' completed' : ''}`,
+                        style: { backgroundImage: `url(images/puzzle_${i}.png)` }
                       },
                         p.completed
                           ? e('div', { className: 'photo-thumb-done' }, '✓')
                           : e('div', { className: 'photo-thumb-overlay' },
-                              `${p.count}/${GAME_CONFIG.CELLS_PER_PUZZLE}`)
+                              `${p.unlockedIndices.length}/${GAME_CONFIG.CELLS_PER_PUZZLE}`)
+                      )
+                    : e('div', { className: 'photo-thumb locked' },
+                        e('span', { className: 'photo-lock-icon' }, '🔒')
                       ),
-                      e('span', { className: 'photo-label' }, `拼圖 ${p.index + 1}`)
-                    )
-                  )
-                )
+                  e('span', { className: 'photo-label' }, `#${i + 1}`)
+                );
+              })
+            )
           )
         )
       );
@@ -422,7 +421,6 @@
       const [locked,  setLocked]                = useState(false);
       const [newlyUnlocked, setNewlyUnlocked]   = useState(new Set());
       const [showCongrats, setShowCongrats]     = useState(false);
-      const [saveStatus, setSaveStatus]         = useState('');
 
       const gameDataRef = useRef(initialData);
       const questionRef = useRef(null);
@@ -458,12 +456,15 @@
           processAnswer(gameDataRef.current, questionRef.current, playerAnswer);
 
         setFeedback(correct ? 'correct' : 'wrong');
-        playSound(correct ? 'snd-correct' : 'snd-wrong');
 
         if (newUnlocks.length > 0) {
+          // 有解鎖：只播 unlock 音效，不播 correct
           playSound('snd-unlock');
           setNewlyUnlocked(new Set(newUnlocks));
           setTimeout(() => setNewlyUnlocked(new Set()), 1400);
+        } else {
+          // 無解鎖：正確播 correct，答錯播 wrong
+          playSound(correct ? 'snd-correct' : 'snd-wrong');
         }
 
         const prevIdx    = gameDataRef.current.currentPuzzleIndex;
@@ -473,10 +474,8 @@
         setGameData(nextData);
         onDataUpdate(nextData);
 
-        setSaveStatus('saving');
-        const sr = await gameClient.saveScore(nextData);
-        setSaveStatus(sr.success ? 'saved' : 'error');
-        setTimeout(() => setSaveStatus(''), 2000);
+        // 靜默儲存，不顯示狀態
+        gameClient.saveScore(nextData).catch(() => {});
 
         if (justCompleted) {
           playSound('snd-complete');
@@ -561,10 +560,6 @@
         // Feedback
         feedback ? e('div', { className: `feedback-flash ${feedback}` },
           feedback === 'correct' ? '✓ 正確！' : '✗ 再加油！') : null,
-        // Save status
-        saveStatus ? e('div', { className: `save-status ${saveStatus}` },
-          saveStatus === 'saving' ? '☁️ 儲存中…'
-          : saveStatus === 'saved' ? '✅ 已儲存' : '⚠️ 儲存失敗') : null,
         // Congrats
         showCongrats ? e(CongratsOverlay, {
           puzzleIndex: pidx, onNext: handleContinue, onMenu: onExit }) : null
