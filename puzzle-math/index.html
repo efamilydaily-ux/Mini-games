@@ -9,13 +9,19 @@
   <title>乘法神速賽</title>
   <link rel="stylesheet" href="style.css" />
 
-  <!-- ══ 音效預載（4 種）══════════════════════════════════════════ -->
-  <audio id="snd-correct" src="https://cdn.freesound.org/previews/341/341695_5858296-lq.mp3" preload="auto"></audio>
-  <audio id="snd-wrong"   src="https://cdn.freesound.org/previews/142/142608_1840739-lq.mp3" preload="auto"></audio>
-  <audio id="snd-unlock"  src="https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3" preload="auto"></audio>
-  <audio id="snd-complete" src="https://cdn.freesound.org/previews/397/397353_4284968-lq.mp3" preload="auto"></audio>
+  <!-- ══ 音效預載（使用 pixabay / mixkit 穩定 CDN）═════════════ -->
+  <!-- correct: bright chime -->
+  <audio id="snd-correct"  src="https://cdn.pixabay.com/audio/2022/03/10/audio_8cbe58c7cf.mp3" preload="auto"></audio>
+  <!-- wrong: low buzz -->
+  <audio id="snd-wrong"    src="https://cdn.pixabay.com/audio/2021/08/04/audio_c6ccf46d22.mp3" preload="auto"></audio>
+  <!-- unlock: sparkle/ding -->
+  <audio id="snd-unlock"   src="https://cdn.pixabay.com/audio/2022/01/18/audio_d0a2bd8aa9.mp3" preload="auto"></audio>
+  <!-- complete: fanfare -->
+  <audio id="snd-complete" src="https://cdn.pixabay.com/audio/2022/03/15/audio_1b109e4ecc.mp3" preload="auto"></audio>
 </head>
 <body>
+  <!-- ══ Star-field canvas ══════════════════════════════════════ -->
+  <canvas id="star-canvas"></canvas>
   <div id="root"></div>
 
   <script type="module">
@@ -277,6 +283,7 @@
 
       const submit = async () => {
         if (!name.trim() || !pass.trim()) { setError('請輸入名字與密碼'); return; }
+        if (name.trim().length < 4) { setError('訓練師名字至少需要 4 個字元'); return; }
         if (pass.length < 6) { setError('密碼至少需要 6 個字元'); return; }
         setLoading(true); setError('');
         const r = await gameClient.login(name.trim(), pass, createDefaultGameData());
@@ -287,9 +294,9 @@
 
       return e('div', { className: 'login-screen' },
         e('div', { className: 'login-card' },
-          e('div', { className: 'login-logo' }, '✖'),
+          e('div', { className: 'login-logo' }, '🚀'),
           e('h1', { className: 'login-title' }, '乘法神速賽'),
-          e('p',  { className: 'login-subtitle' }, '解鎖拼圖，挑戰極速乘法！'),
+          e('p',  { className: 'login-subtitle' }, '⭐ 解鎖星際拼圖，挑戰極速乘法！'),
           e('div', { className: 'field-group' },
             e('label', null, '訓練師名字'),
             e('input', { type: 'text', placeholder: '輸入你的名字…', value: name,
@@ -607,6 +614,92 @@
     }
 
     createRoot(document.getElementById('root')).render(e(App));
+
+    // ════════════════════════════════════════════════════════════
+    //  Star-field canvas animation
+    // ════════════════════════════════════════════════════════════
+    (function initStars() {
+      const canvas = document.getElementById('star-canvas');
+      const ctx    = canvas.getContext('2d');
+
+      let W, H, stars = [];
+
+      function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+
+      function makeStar() {
+        return {
+          x:    Math.random() * W,
+          y:    Math.random() * H,
+          r:    Math.random() * 1.2 + 0.2,
+          // twinkle speed
+          speed: Math.random() * 0.008 + 0.002,
+          phase: Math.random() * Math.PI * 2,
+          // slow drift
+          vx:   (Math.random() - 0.5) * 0.04,
+          vy:   (Math.random() - 0.5) * 0.04,
+          // colour: mostly white, occasional teal or violet
+          hue:  Math.random() < 0.12 ? 174 : Math.random() < 0.08 ? 270 : 0,
+          sat:  Math.random() < 0.2  ? 80  : 0,
+        };
+      }
+
+      function init() {
+        resize();
+        stars = Array.from({ length: 220 }, makeStar);
+      }
+
+      let t = 0;
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        t += 0.016;
+        for (const s of stars) {
+          const alpha = 0.35 + 0.55 * (0.5 + 0.5 * Math.sin(t * s.speed * 60 + s.phase));
+          const color = s.sat > 0
+            ? `hsla(${s.hue},${s.sat}%,85%,${alpha})`
+            : `rgba(220,230,255,${alpha})`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          s.x += s.vx; s.y += s.vy;
+          if (s.x < -2) s.x = W + 2;
+          if (s.x > W + 2) s.x = -2;
+          if (s.y < -2) s.y = H + 2;
+          if (s.y > H + 2) s.y = -2;
+        }
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', resize);
+      init();
+      draw();
+    })();
+
+    // ════════════════════════════════════════════════════════════
+    //  Floating space decorations 🪐 ☄️ 🌟 ✨
+    // ════════════════════════════════════════════════════════════
+    (function spaceDecos() {
+      const icons  = ['🪐','☄️','🌟','✨','🛸','🌙','💫','⭐','🌌'];
+      const count  = 7;
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        el.className = 'space-deco';
+        el.textContent = icons[i % icons.length];
+        const size = 14 + Math.random() * 18;
+        el.style.cssText = `
+          font-size: ${size}px;
+          left: ${8 + Math.random() * 84}%;
+          bottom: -${size * 2}px;
+          animation-duration: ${18 + Math.random() * 24}s;
+          animation-delay: ${-Math.random() * 20}s;
+          opacity: ${0.25 + Math.random() * 0.35};
+        `;
+        document.body.appendChild(el);
+      }
+    })();
   </script>
 </body>
 </html>
