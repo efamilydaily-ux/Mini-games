@@ -37,20 +37,14 @@ export function createDefaultGameData() {
     totalScore: 0,
     combo: 0,
     maxCombo: 0,
-    answeredCount: 0,     // total questions answered (right or wrong)
+    answeredCount: 0,
     correctCount: 0,
     wrongCount: 0,
-
-    // Puzzle progress: array of 10 objects, each tracking unlocked cells
     puzzles: Array.from({ length: GAME_CONFIG.TOTAL_PUZZLES }, () => ({
-      unlockedIndices: [], // e.g. [0, 1, 3, ...]
+      unlockedIndices: [],
       completed: false,
     })),
-
-    // Current active puzzle index
     currentPuzzleIndex: 0,
-
-    // Error tracker: { "3x4": { a: 3, b: 4, replayAt: [5, 10, 20], replayed: [] } }
     errorTracker: {},
   };
 }
@@ -58,40 +52,61 @@ export function createDefaultGameData() {
 // ─── Question generation ──────────────────────────────────────────────────────
 
 /**
- * Generate a random multiplication question.
- * Avoids factor 1; picks from DIGITS (2-9).
- * @param {object} errorTracker
- * @param {number} answeredCount  – used to decide whether to replay an error
- * @returns {{ a: number, b: number, answer: number, isReplay: boolean }}
- */
-export function generateQuestion(errorTracker = {}, answeredCount = 0) {
-  // Check if any error should be replayed now
-  const dueReplay = getDueReplayQuestion(errorTracker, answeredCount);
-  if (dueReplay) {
-    return { ...dueReplay, isReplay: true };
-  }
-
-  const { DIGITS } = GAME_CONFIG;
-  const a = DIGITS[Math.floor(Math.random() * DIGITS.length)];
-  const b = DIGITS[Math.floor(Math.random() * DIGITS.length)];
-  return { a, b, answer: a * b, isReplay: false };
-}
-
-/**
  * Returns the first error question due for replay at the current answeredCount,
  * or null if none.
+ *
+ * @param {object} errorTracker
+ * @param {number} answeredCount
+ * @param {object|null} lastQuestion – skips if it would produce a consecutive duplicate
  */
-export function getDueReplayQuestion(errorTracker, answeredCount) {
+export function getDueReplayQuestion(errorTracker, answeredCount, lastQuestion = null) {
   for (const key of Object.keys(errorTracker)) {
     const entry = errorTracker[key];
     if (!entry.replayAt || entry.replayAt.length === 0) continue;
 
     const nextReplayAt = entry.replayAt[0];
     if (answeredCount >= nextReplayAt && !entry.replayed.includes(nextReplayAt)) {
+      // 跳過與上一題完全相同的複習題，避免連續重複
+      if (lastQuestion && lastQuestion.a === entry.a && lastQuestion.b === entry.b) continue;
       return { a: entry.a, b: entry.b, answer: entry.a * entry.b };
     }
   }
   return null;
+}
+
+/**
+ * Generate a random multiplication question.
+ * Avoids factor 1; picks from DIGITS (2-9).
+ * Ensures the new question is not identical to lastQuestion.
+ *
+ * @param {object} errorTracker
+ * @param {number} answeredCount
+ * @param {object|null} lastQuestion – the previous question; avoids consecutive repeat
+ * @returns {{ a: number, b: number, answer: number, isReplay: boolean }}
+ */
+export function generateQuestion(errorTracker = {}, answeredCount = 0, lastQuestion = null) {
+  // Check replay queue first (skips same-as-last automatically)
+  const dueReplay = getDueReplayQuestion(errorTracker, answeredCount, lastQuestion);
+  if (dueReplay) {
+    return { ...dueReplay, isReplay: true };
+  }
+
+  const { DIGITS } = GAME_CONFIG;
+  let a, b, attempts = 0;
+
+  // Retry up to 20 times to avoid producing the same question as last time
+  do {
+    a = DIGITS[Math.floor(Math.random() * DIGITS.length)];
+    b = DIGITS[Math.floor(Math.random() * DIGITS.length)];
+    attempts++;
+  } while (
+    lastQuestion &&
+    lastQuestion.a === a &&
+    lastQuestion.b === b &&
+    attempts < 20
+  );
+
+  return { a, b, answer: a * b, isReplay: false };
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -112,7 +127,7 @@ export function calcPoints(combo) {
  *
  * @param {object} gameData   – current state (treated as immutable)
  * @param {{ a, b, answer, isReplay }} question
- * @param {number} playerAnswer  – integer entered by player
+ * @param {number} playerAnswer
  * @returns {{ gameData: object, correct: boolean, pointsEarned: number, newUnlocks: number[] }}
  */
 export function processAnswer(gameData, question, playerAnswer) {
@@ -132,13 +147,13 @@ export function processAnswer(gameData, question, playerAnswer) {
     next.combo += 1;
     next.maxCombo = Math.max(next.maxCombo, next.combo);
     next.correctCount += 1;
-    pointsEarned = calcPoints(next.combo - 1); // combo before this answer
+    pointsEarned = calcPoints(next.combo - 1);
     next.totalScore += pointsEarned;
 
     // Mark replay as done if this was a replay question
     if (question.isReplay && next.errorTracker[key]) {
       const entry = next.errorTracker[key];
-      const doneAt = entry.replayAt.shift(); // pop the front
+      const doneAt = entry.replayAt.shift();
       entry.replayed.push(doneAt);
     }
 
@@ -156,7 +171,6 @@ export function processAnswer(gameData, question, playerAnswer) {
         replayed: [],
       };
     } else {
-      // Push remaining replay checkpoints if they haven't been scheduled
       const existingEntry = next.errorTracker[key];
       GAME_CONFIG.ERROR_REPLAY_AT.forEach(checkpoint => {
         if (
@@ -182,12 +196,11 @@ export function processAnswer(gameData, question, playerAnswer) {
  * Returns array of newly unlocked cell indices (for animation).
  */
 export function applyScoreToPuzzle(gameData) {
-  const {
-    totalScore,
-    puzzles,
-    CELLS_PER_PUZZLE = GAME_CONFIG.CELLS_PER_PUZZLE,
-  } = gameData;
+  // Guard: if all puzzles already completed, nothing to unlock
+  const allDone = gameData.puzzles.every(p => p.completed);
+  if (allDone) return [];
 
+  const { totalScore, puzzles } = gameData;
   const totalCellsEarned = Math.floor(totalScore / GAME_CONFIG.POINTS_PER_20);
   const newUnlocks = [];
 
@@ -197,10 +210,7 @@ export function applyScoreToPuzzle(gameData) {
     const puzzle = puzzles[pi];
     const cellsForThisPuzzle = Math.min(remaining, GAME_CONFIG.CELLS_PER_PUZZLE);
 
-    // Determine target unlock list
     const targetUnlocked = UNLOCK_ORDER.slice(0, cellsForThisPuzzle);
-
-    // Find what's newly unlocked
     const alreadyUnlocked = new Set(puzzle.unlockedIndices);
     targetUnlocked.forEach(idx => {
       if (!alreadyUnlocked.has(idx)) {
@@ -211,7 +221,6 @@ export function applyScoreToPuzzle(gameData) {
       }
     });
 
-    // Maintain UNLOCK_ORDER ordering
     puzzle.unlockedIndices.sort((a, b) =>
       UNLOCK_ORDER.indexOf(a) - UNLOCK_ORDER.indexOf(b)
     );
@@ -222,7 +231,7 @@ export function applyScoreToPuzzle(gameData) {
     if (remaining <= 0) break;
   }
 
-  // Advance currentPuzzleIndex if current puzzle is complete
+  // Only advance index if there is a next puzzle
   if (
     puzzles[gameData.currentPuzzleIndex]?.completed &&
     gameData.currentPuzzleIndex < GAME_CONFIG.TOTAL_PUZZLES - 1
@@ -235,9 +244,6 @@ export function applyScoreToPuzzle(gameData) {
 
 /**
  * Get the set of unlocked cell indices for a given puzzle.
- * @param {object} gameData
- * @param {number} puzzleIndex
- * @returns {Set<number>}
  */
 export function getUnlockedSet(gameData, puzzleIndex) {
   return new Set(gameData.puzzles[puzzleIndex]?.unlockedIndices ?? []);
