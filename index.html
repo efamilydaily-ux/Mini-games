@@ -22,30 +22,8 @@
 
   <!-- 遊戲選擇選單 -->
   <div class="games-grid">
-
-    <!-- 遊戲 1: 乘法神速賽 -->
-    <a href="./puzzle-math/index.html" class="game-card pokemon-theme">
-      <div class="game-badge new-badge">NEW</div>
-      <div class="game-icon">🚀</div>
-      <div class="game-details">
-        <h2 class="game-name">乘法神速賽</h2>
-        <p class="game-desc">極速乘法直覺訓練！每累積 20 分解鎖一格拼圖，共 10 幅星際圖鑑等你揭開！</p>
-        <span class="btn-enter-game">立即出發 ➔</span>
-      </div>
-    </a>
-
-    <!-- 遊戲 2: 未來預留位置 -->
-    <div class="game-card coming-soon">
-      <div class="game-icon">🔒</div>
-      <div class="game-details">
-        <h2 class="game-name">新遊戲期待中...</h2>
-        <p class="game-desc">更多為小學生量身打造的趣味學科對戰遊戲即將解鎖！</p>
-        <span class="btn-enter-game disabled">敬請期待</span>
-      </div>
-    </div>
-
-
-    <!-- 遊戲 2: 寶可夢數感訓練所（暫時隱藏）
+    
+    <!-- 遊戲 1: 寶可夢數感訓練所 -->
     <a href="./pokemon-math/index.html" class="game-card pokemon-theme">
       <div class="game-badge">HOT</div>
       <div class="game-icon">⚡</div>
@@ -55,9 +33,8 @@
         <span class="btn-enter-game">立即出發 ➔</span>
       </div>
     </a>
-    -->
 
-    <!-- 遊戲 3: 伊布分數小數互化研究所（暫時隱藏）
+    <!-- 遊戲 2: 伊布分數小數互化研究所 -->
     <a href="./eevee-math/index.html" class="game-card eevee-theme">
       <div class="game-badge new-badge">NEW</div>
       <div class="game-icon">🌟</div>
@@ -67,7 +44,16 @@
         <span class="btn-enter-game">立即出發 ➔</span>
       </div>
     </a>
-    -->
+
+    <!-- 未來遊戲預留位置 -->
+    <div class="game-card coming-soon">
+      <div class="game-icon">🔒</div>
+      <div class="game-details">
+        <h2 class="game-name">新遊戲期待中...</h2>
+        <p class="game-desc">更多為小學生量身打造的趣味學科對戰遊戲即將解鎖！</p>
+        <span class="btn-enter-game disabled">敬請期待</span>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -91,54 +77,6 @@
     `;
     container.appendChild(star);
   }
-
-  // 🔊 遊戲按鈕音效
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  function playLaunchSound() {
-    // 上升音調：模擬「出發！」的感覺
-    const times = [0, 0.08, 0.16, 0.24];
-    const freqs = [330, 440, 550, 660];
-    times.forEach((t, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(freqs[i], audioCtx.currentTime + t);
-      gain.gain.setValueAtTime(0.18, audioCtx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.12);
-      osc.start(audioCtx.currentTime + t);
-      osc.stop(audioCtx.currentTime + t + 0.13);
-    });
-  }
-
-  function playLockedSound() {
-    // 低沉單音：表示未解鎖
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-    osc.start(audioCtx.currentTime);
-    osc.stop(audioCtx.currentTime + 0.26);
-  }
-
-  // 綁定遊戲卡音效
-  document.querySelectorAll('.game-card').forEach(card => {
-    card.addEventListener('click', () => {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      if (card.classList.contains('coming-soon')) {
-        playLockedSound();
-      } else {
-        playLaunchSound();
-      }
-    });
-  });
 </script>
 </body>
 </html>
